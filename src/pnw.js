@@ -82,6 +82,8 @@ const NATION_QUERY = `
         projects
         wars_won
         wars_lost
+        discord
+        discord_id
         money
         food
         coal
@@ -191,6 +193,8 @@ const ALLIANCE_NATIONS_QUERY = `
         projects
         wars_won
         wars_lost
+        discord
+        discord_id
         money
         food
         coal

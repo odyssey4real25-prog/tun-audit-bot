@@ -15,12 +15,12 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function auditAllMembers(allianceId, settings, { delayMs = 150 } = {}) {
+async function auditAllMembers(allianceId, settings, { delayMs = 150, checks = ALL_CHECKS } = {}) {
   const { members } = await getAllianceNations(allianceId);
 
   const auditResults = [];
   for (const nation of members) {
-    const results = runChecks(nation, ALL_CHECKS, settings);
+    const results = runChecks(nation, checks, settings);
     const maxPossible = results.reduce((sum, r) => sum + r.maxPoints, 0);
     const earned = results.reduce((sum, r) => sum + r.earnedPoints, 0);
     const percent = maxPossible === 0 ? 0 : Math.round((earned / maxPossible) * 1000) / 10;
