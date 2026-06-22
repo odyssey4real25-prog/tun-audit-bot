@@ -28,9 +28,9 @@ module.exports = {
     }
 
     const results = runChecks(nation, checks, settings);
-    const { embed, percent, pass } = buildReportEmbed(nation, results, settings, "Infrastructure & Land Audit");
+    const { embed, percent, pass, grade } = buildReportEmbed(nation, results, settings, "Infrastructure & Land Audit");
 
-    const record = buildHistoryRecord(nation, percent, pass, "infrastructure_land");
+    const record = buildHistoryRecord(nation, percent, pass, "infrastructure_land", grade);
     settings.auditHistory.push(record);
     saveSettings(interaction.guildId, settings);
 

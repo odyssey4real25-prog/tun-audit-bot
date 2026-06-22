@@ -54,8 +54,8 @@ module.exports = {
 
     let posted = 0;
     for (const nation of members) {
-      const { embed, percent, pass } = runGrandAudit(nation, settings);
-      settings.auditHistory.push(buildHistoryRecord(nation, percent, pass, "auto_grand_audit"));
+      const { embed, percent, pass, grade } = runGrandAudit(nation, settings);
+      settings.auditHistory.push(buildHistoryRecord(nation, percent, pass, "auto_grand_audit", grade));
 
       try {
         await channel.send({ embeds: [embed] });

@@ -9,6 +9,7 @@
 const { getAllianceNations } = require("../pnw");
 const { ALL_CHECKS } = require("./grandAudit");
 const { runChecks } = require("./runAudit");
+const { getGrade, isPassingGrade } = require("./grading");
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -23,9 +24,10 @@ async function auditAllMembers(allianceId, settings, { delayMs = 150 } = {}) {
     const maxPossible = results.reduce((sum, r) => sum + r.maxPoints, 0);
     const earned = results.reduce((sum, r) => sum + r.earnedPoints, 0);
     const percent = maxPossible === 0 ? 0 : Math.round((earned / maxPossible) * 1000) / 10;
-    const pass = percent >= settings.passingScore;
+    const grade = getGrade(percent, settings.gradeThresholds);
+    const pass = isPassingGrade(grade);
 
-    auditResults.push({ nation, results, percent, pass });
+    auditResults.push({ nation, results, percent, pass, grade });
 
     // Be polite to the PnW API instead of firing 100+ requests at once.
     await sleep(delayMs);

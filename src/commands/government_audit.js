@@ -1,16 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const { getAllianceNations } = require("../pnw");
-const { checks: infraChecks } = require("../audit/checks/infrastructureLand");
-const { checks: buildChecks } = require("../audit/checks/buildsProjects");
-const { checks: otherChecks } = require("../audit/checks/others");
-const { runChecks } = require("../audit/runAudit");
+const { auditAllMembers } = require("../audit/allianceAudit");
 const { getSettings, saveSettings } = require("../db");
-
-const ALL_CHECKS = [...infraChecks, ...buildChecks, ...otherChecks];
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 module.exports = {
   minTier: "government",
@@ -27,37 +17,26 @@ module.exports = {
       return;
     }
 
-    let members;
+    await interaction.editReply(`⏳ Auditing all members, this may take a minute...`);
+
+    let auditResults;
     try {
-      const result = await getAllianceNations(settings.alliance.id);
-      members = result.members;
+      auditResults = await auditAllMembers(settings.alliance.id, settings);
     } catch (error) {
       await interaction.editReply(`❌ Couldn't fetch alliance nations: ${error.message}`);
       return;
     }
 
-    await interaction.editReply(`⏳ Auditing ${members.length} members, this may take a minute...`);
-
-    let totalPercent = 0;
-    let passingCount = 0;
-    let failingCount = 0;
+    const gradeCounts = { Excellent: 0, Passing: 0, "Needs Improvement": 0, Failing: 0 };
     const failureTally = {}; // label -> how many nations failed this check
+    let totalPercent = 0;
 
-    for (const nation of members) {
-      const results = runChecks(nation, ALL_CHECKS, settings);
-      const maxPossible = results.reduce((sum, r) => sum + r.maxPoints, 0);
-      const earned = results.reduce((sum, r) => sum + r.earnedPoints, 0);
-      const percent = maxPossible === 0 ? 0 : Math.round((earned / maxPossible) * 1000) / 10;
-      const pass = percent >= settings.passingScore;
-
+    for (const { results, percent, grade, nation } of auditResults) {
       totalPercent += percent;
-      if (pass) passingCount += 1;
-      else failingCount += 1;
+      gradeCounts[grade.label] += 1;
 
       for (const r of results) {
-        if (!r.passed) {
-          failureTally[r.label] = (failureTally[r.label] || 0) + 1;
-        }
+        if (!r.passed) failureTally[r.label] = (failureTally[r.label] || 0) + 1;
       }
 
       settings.auditHistory.push({
@@ -65,33 +44,34 @@ module.exports = {
         nationName: nation.nation_name,
         date: new Date().toISOString().split("T")[0],
         score: percent,
-        pass,
+        pass: grade.label === "Excellent" || grade.label === "Passing",
+        grade: grade.label,
         command: "government_audit"
       });
-
-      // Small pause to be a polite neighbor to the PnW API instead of
-      // hammering it with 100+ requests all at once.
-      await sleep(150);
     }
 
     saveSettings(interaction.guildId, settings);
 
-    const averageScore = members.length === 0 ? 0 : Math.round((totalPercent / members.length) * 10) / 10;
+    const averageScore = auditResults.length === 0 ? 0 : Math.round((totalPercent / auditResults.length) * 10) / 10;
 
-    const topFailures = Object.entries(failureTally)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([label, count]) => `${label}: ${count} nation(s)`)
-      .join("\n") || "None — great job!";
+    const topFailures =
+      Object.entries(failureTally)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([label, count]) => `${label}: ${count} nation(s)`)
+        .join("\n") || "None — great job!";
 
     const embed = new EmbedBuilder()
       .setTitle(`Government Audit — ${settings.alliance.name}`)
       .setColor(0x3498db)
       .addFields(
-        { name: "Members Audited", value: String(members.length), inline: true },
+        { name: "Members Audited", value: String(auditResults.length), inline: true },
         { name: "Average Score", value: `${averageScore}%`, inline: true },
-        { name: "Passing", value: String(passingCount), inline: true },
-        { name: "Failing", value: String(failingCount), inline: true },
+        { name: "\u200b", value: "\u200b", inline: true },
+        { name: "🟢 Excellent", value: String(gradeCounts.Excellent), inline: true },
+        { name: "🟢 Passing", value: String(gradeCounts.Passing), inline: true },
+        { name: "🟡 Needs Improvement", value: String(gradeCounts["Needs Improvement"]), inline: true },
+        { name: "🔴 Failing", value: String(gradeCounts.Failing), inline: true },
         { name: "Most Common Failures", value: topFailures }
       );
 

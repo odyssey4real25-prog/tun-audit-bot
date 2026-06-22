@@ -15,11 +15,12 @@ module.exports = {
       ([key, value]) => `**${key}**: ${value} pts`
     );
 
+    const { excellent, good, average } = settings.gradeThresholds;
     const embed = new EmbedBuilder()
       .setTitle("Current Audit Scoring")
       .setColor(0x3498db)
       .setDescription(lines.join("\n"))
-      .setFooter({ text: `Total: ${total} / 100. Passing score: ${settings.passingScore}%` });
+      .setFooter({ text: `Total: ${total} / 100. Grades — Excellent: ${excellent}%+, Passing: ${good}%+, Needs Improvement: ${average}%+, Failing: below ${average}%` });
 
     await interaction.reply({ embeds: [embed] });
   }

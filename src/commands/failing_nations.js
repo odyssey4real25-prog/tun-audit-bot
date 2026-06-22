@@ -6,7 +6,7 @@ module.exports = {
   minTier: "mentor",
   data: new SlashCommandBuilder()
     .setName("failing_nations")
-    .setDescription("List every alliance member currently below the passing score."),
+    .setDescription("List every alliance member currently rated Needs Improvement or Failing."),
 
   async execute(interaction) {
     await interaction.deferReply();
@@ -30,12 +30,14 @@ module.exports = {
     const failing = auditResults.filter((r) => !r.pass).sort((a, b) => a.percent - b.percent);
 
     if (failing.length === 0) {
-      await interaction.followUp("✅ No nations are currently failing!");
+      await interaction.followUp("✅ No nations are currently rated Needs Improvement or Failing!");
       return;
     }
 
     // Discord embed fields cap at 1024 characters — split into chunks of ~20 lines if needed.
-    const lines = failing.map((r) => `❌ **${r.nation.nation_name}** — ${r.percent}% (${r.nation.num_cities} cities)`);
+    const lines = failing.map(
+      (r) => `${r.grade.emoji} **${r.nation.nation_name}** — ${r.percent}% (${r.grade.label}, ${r.nation.num_cities} cities)`
+    );
     const chunks = [];
     let current = "";
     for (const line of lines) {
@@ -51,7 +53,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle(`Failing Nations — ${settings.alliance.name}`)
       .setColor(0xe74c3c)
-      .setDescription(`**${failing.length}** of **${auditResults.length}** nations are below ${settings.passingScore}%.`);
+      .setDescription(`**${failing.length}** of **${auditResults.length}** nations are rated Needs Improvement or Failing.`);
 
     chunks.forEach((chunk, idx) => {
       embed.addFields({ name: idx === 0 ? "Nations" : "\u200b", value: chunk });

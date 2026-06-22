@@ -28,9 +28,9 @@ module.exports = {
     }
 
     const results = runChecks(nation, checks, settings);
-    const { embed, percent, pass } = buildReportEmbed(nation, results, settings, "Other Compliance Audit");
+    const { embed, percent, pass, grade } = buildReportEmbed(nation, results, settings, "Other Compliance Audit");
 
-    const record = buildHistoryRecord(nation, percent, pass, "others");
+    const record = buildHistoryRecord(nation, percent, pass, "others", grade);
     settings.auditHistory.push(record);
     saveSettings(interaction.guildId, settings);
 

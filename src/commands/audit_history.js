@@ -34,7 +34,7 @@ module.exports = {
     const lines = records
       .slice(-10)
       .reverse()
-      .map((r) => `**${r.date}** — ${r.score}% — ${r.pass ? "✅ PASS" : "❌ FAIL"} (${r.command})`);
+      .map((r) => `**${r.date}** — ${r.score}% — ${r.grade ?? (r.pass ? "PASS" : "FAIL")} (${r.command})`);
 
     const embed = new EmbedBuilder()
       .setTitle(`Audit History — ${records[0].nationName}`)

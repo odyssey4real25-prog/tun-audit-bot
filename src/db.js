@@ -48,12 +48,15 @@ function defaultSettings() {
       check17_power_upkeep: 5,
       check18_military_fill: 9
     },
-    passingScore: 75,
+    // Replaces the old single pass/fail cutoff with 4 tiers. A nation's
+    // score lands in whichever tier it's high enough for: Excellent (top),
+    // Passing, Needs Improvement, or Failing (bottom, below "average").
+    gradeThresholds: { excellent: 90, good: 80, average: 70 },
     warchestPolicy: {},
     resourcePolicy: { upkeepBufferDays: 5 },
     auditChannelId: null,
     roleMap: {}, // { "discordRoleId": "mentor" | "government" | "administrator" }
-    auditHistory: [] // { nationId, nationName, date, score, pass, command }
+    auditHistory: [] // { nationId, nationName, date, score, pass, grade, command }
   };
 }
 
@@ -83,6 +86,19 @@ function getSettings(guildId) {
       "C11-C15": { ...oldFlat },
       "C16-C20": { ...oldFlat },
       "C21+": { ...oldFlat }
+    };
+    saveSettings(guildId, settings);
+  }
+
+  // Migration: older versions stored one flat passingScore instead of 4
+  // grade tiers. If we spot the old shape, use it as the "average" cutoff
+  // (the old pass/fail line) and pick sensible tiers above it.
+  if (!settings.gradeThresholds) {
+    const oldPassingScore = settings.passingScore ?? 70;
+    settings.gradeThresholds = {
+      excellent: Math.min(100, oldPassingScore + 20),
+      good: Math.min(100, oldPassingScore + 10),
+      average: oldPassingScore
     };
     saveSettings(guildId, settings);
   }

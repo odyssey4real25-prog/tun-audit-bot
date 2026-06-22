@@ -27,9 +27,9 @@ module.exports = {
       return;
     }
 
-    const { embed, percent, pass } = runGrandAudit(nation, settings);
+    const { embed, percent, pass, grade } = runGrandAudit(nation, settings);
 
-    settings.auditHistory.push(buildHistoryRecord(nation, percent, pass, "grand_audit"));
+    settings.auditHistory.push(buildHistoryRecord(nation, percent, pass, "grand_audit", grade));
     saveSettings(interaction.guildId, settings);
 
     await interaction.editReply({ embeds: [embed] });
