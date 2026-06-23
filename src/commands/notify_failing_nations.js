@@ -1,19 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { auditAllMembers } = require("../audit/allianceAudit");
-const { checks: infraChecks } = require("../audit/checks/infrastructureLand");
-const { checks: buildChecks } = require("../audit/checks/buildsProjects");
-const { checks: otherChecks } = require("../audit/checks/others");
-const { ALL_CHECKS } = require("../audit/grandAudit");
+const { CATEGORIES, CATEGORY_CHOICES } = require("../audit/categories");
 const { resolveDiscordUser } = require("../audit/resolveDiscordUser");
 const { buildFailureDM } = require("../audit/notifyEmbed");
 const { getSettings } = require("../db");
-
-const CATEGORIES = {
-  infrastructure_land: { checks: infraChecks, label: "Infrastructure & Land" },
-  build_slots_project: { checks: buildChecks, label: "Builds & Projects" },
-  others: { checks: otherChecks, label: "Other Compliance" },
-  grand_audit: { checks: ALL_CHECKS, label: "Grand Audit" }
-};
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -39,18 +29,11 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("notify_failing_nations")
     .setDescription("DM nations about what they're failing in a category. Always previews before sending.")
-    .addStringOption((opt) =>
-      opt
-        .setName("category")
-        .setDescription("Which audit category to check and message about")
-        .setRequired(true)
-        .addChoices(
-          { name: "Infrastructure & Land", value: "infrastructure_land" },
-          { name: "Builds & Projects", value: "build_slots_project" },
-          { name: "Other Compliance", value: "others" },
-          { name: "Grand Audit (all checks)", value: "grand_audit" }
-        )
-    )
+    .addStringOption((opt) => {
+      opt.setName("category").setDescription("Which audit category to check and message about").setRequired(true);
+      for (const choice of CATEGORY_CHOICES) opt.addChoices(choice);
+      return opt;
+    })
     .addStringOption((opt) =>
       opt
         .setName("include")
