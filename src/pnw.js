@@ -330,4 +330,31 @@ async function resolveNationId(input) {
   return id;
 }
 
-module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId };
+// TEMPORARY — used only by /api_test to find the correct MAP field name.
+const NATION_TEST_MAP_QUERY = `
+  query GetNationMapTest($id: [Int]) {
+    nations(id: $id, first: 1) {
+      data {
+        id
+        nation_name
+        offensive_wars {
+          id
+          turnsleft
+          att_points
+          def_points
+        }
+      }
+    }
+  }
+`;
+
+async function getNationTestMap(nationId) {
+  const data = await queryPNW(NATION_TEST_MAP_QUERY, { id: [nationId] });
+  const nation = data?.nations?.data?.[0];
+  if (!nation) {
+    throw new Error(`No nation found with ID ${nationId}. Double-check the ID.`);
+  }
+  return nation;
+}
+
+module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId, getNationTestMap };

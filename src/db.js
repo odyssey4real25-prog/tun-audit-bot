@@ -46,8 +46,15 @@ function defaultSettings() {
       check14_resource_control: 8,
       check16_activity: 8,
       check17_power_upkeep: 5,
-      check18_military_fill: 9
+      check18_military_fill: 9,
+      check19_map_usage: 5
     },
+    // How many hours of inactivity before a nation is considered inactive
+    // (used by Check 16 and the automatic inactivity DM).
+    activityLimitHours: 36,
+    // Which nations the Raid Requirement applies to, and how many active
+    // offensive wars they need (used by Check 13 and the automatic raid DM).
+    raidPolicy: { maxCityTier: 14, requiredOffensiveWars: 4 },
     // Replaces the old single pass/fail cutoff with 4 tiers. A nation's
     // score lands in whichever tier it's high enough for: Excellent (top),
     // Passing, Needs Improvement, or Failing (bottom, below "average").
@@ -56,7 +63,10 @@ function defaultSettings() {
     resourcePolicy: { upkeepBufferDays: 5 },
     auditChannelId: null,
     roleMap: {}, // { "discordRoleId": "mentor" | "government" | "administrator" }
-    auditHistory: [] // { nationId, nationName, date, score, pass, grade, command }
+    auditHistory: [], // { nationId, nationName, date, score, pass, grade, command }
+    // Tracks the last time each nation was auto-DM'd for each condition,
+    // so the automatic notifier doesn't message the same nation every run.
+    lastNotified: {} // { "nationId:condition": isoTimestamp }
   };
 }
 
@@ -102,6 +112,27 @@ function getSettings(guildId) {
     };
     saveSettings(guildId, settings);
   }
+
+  // Migration: add fields introduced after a server's settings were
+  // already created, using the same defaults a brand-new server would get.
+  let migrated = false;
+  if (settings.activityLimitHours === undefined) {
+    settings.activityLimitHours = 36;
+    migrated = true;
+  }
+  if (!settings.raidPolicy) {
+    settings.raidPolicy = { maxCityTier: 14, requiredOffensiveWars: 4 };
+    migrated = true;
+  }
+  if (settings.scores && settings.scores.check19_map_usage === undefined) {
+    settings.scores.check19_map_usage = 5;
+    migrated = true;
+  }
+  if (!settings.lastNotified) {
+    settings.lastNotified = {};
+    migrated = true;
+  }
+  if (migrated) saveSettings(guildId, settings);
 
   return settings;
 }

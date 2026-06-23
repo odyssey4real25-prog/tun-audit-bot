@@ -6,6 +6,10 @@ const { loadCommands } = require("../loadCommands");
 // you never need to manually update /help when adding or changing a
 // command — as long as the new command file sets a clear description and
 // a minTier, it'll show up here correctly on its own.
+//
+// As more commands get added, a tier's combined text can grow past
+// Discord's 1024-character-per-field limit — chunkLines() automatically
+// splits it across multiple fields instead of erroring out.
 
 const TIER_ORDER = ["member", "mentor", "government", "administrator"];
 const TIER_LABELS = {
@@ -14,6 +18,21 @@ const TIER_LABELS = {
   government: "🔵 Government",
   administrator: "🔴 Administrator"
 };
+
+function chunkLines(lines, maxLength = 1000) {
+  const chunks = [];
+  let current = "";
+  for (const line of lines) {
+    if ((current + "\n" + line).length > maxLength) {
+      chunks.push(current);
+      current = line;
+    } else {
+      current = current ? `${current}\n${line}` : line;
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks.length > 0 ? chunks : ["None yet."];
+}
 
 module.exports = {
   minTier: "member",
@@ -38,8 +57,10 @@ module.exports = {
       );
 
     for (const tier of TIER_ORDER) {
-      const list = grouped[tier];
-      embed.addFields({ name: TIER_LABELS[tier], value: list.length > 0 ? list.join("\n") : "None yet." });
+      const chunks = chunkLines(grouped[tier]);
+      chunks.forEach((chunk, idx) => {
+        embed.addFields({ name: idx === 0 ? TIER_LABELS[tier] : "\u200b", value: chunk });
+      });
     }
 
     await interaction.reply({ embeds: [embed] });

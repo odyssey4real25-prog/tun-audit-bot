@@ -61,16 +61,17 @@ const checks = [
   {
     key: "check13_raid_requirement",
     label: "Raid Requirement",
-    recommendation: "Declare offensive wars until you have 4 active.",
-    run(nation) {
-      if (nation.num_cities >= 15) {
-        return { passed: true, detail: "C15+ nations are exempt from the raid requirement." };
+    recommendation: "Declare offensive wars until you meet your alliance's raid requirement.",
+    run(nation, settings) {
+      const { maxCityTier, requiredOffensiveWars } = settings.raidPolicy;
+      if (nation.num_cities > maxCityTier) {
+        return { passed: true, detail: `Nations above ${maxCityTier} cities are exempt from the raid requirement.` };
       }
       const activeOffensive = activeWarCount(nation.offensive_wars);
-      const passed = activeOffensive >= 4;
+      const passed = activeOffensive >= requiredOffensiveWars;
       return {
         passed,
-        detail: `${activeOffensive}/4 active offensive wars.`
+        detail: `${activeOffensive}/${requiredOffensiveWars} active offensive wars.`
       };
     }
   },
@@ -102,13 +103,14 @@ const checks = [
     key: "check16_activity",
     label: "Activity Check",
     recommendation: "Log in and take an action in-game.",
-    run(nation) {
+    run(nation, settings) {
       const lastActive = new Date(nation.last_active);
       const hoursSince = (Date.now() - lastActive.getTime()) / (1000 * 60 * 60);
-      const passed = hoursSince <= 36;
+      const limit = settings.activityLimitHours;
+      const passed = hoursSince <= limit;
       return {
         passed,
-        detail: `Last active ${hoursSince.toFixed(1)} hours ago (limit: 36 hours).`
+        detail: `Last active ${hoursSince.toFixed(1)} hours ago (limit: ${limit} hours).`
       };
     }
   },
