@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { getSettings } = require("../db");
+const { isMention, resolveNationIdFromMention } = require("../audit/resolveNationInput");
 
 // Compares each record to the most recent EARLIER record of the same
 // command type (so a Grand Audit is only ever compared to a previous
@@ -26,27 +27,39 @@ module.exports = {
     .setName("audit_history")
     .setDescription("View previous audit records for a nation, with score trends.")
     .addStringOption((opt) =>
-      opt.setName("nation").setDescription("Nation ID, name, or profile link").setRequired(true)
+      opt.setName("nation").setDescription("Nation ID, name, profile link, or @mention their Discord").setRequired(true)
     ),
 
   async execute(interaction) {
+    await interaction.deferReply();
+
     const input = interaction.options.getString("nation").trim();
     const settings = getSettings(interaction.guildId);
 
-    // No need to call the PnW API here — just match against what's already
-    // saved locally, by ID (plain number or from a link) or by name.
-    const linkMatch = input.match(/id=(\d+)/);
-    const idFromInput = linkMatch ? Number(linkMatch[1]) : /^\d+$/.test(input) ? Number(input) : null;
+    let idFromInput = null;
+
+    if (isMention(input)) {
+      // Only hits the PnW API in this specific case — plain ID/name/link
+      // lookups below stay fast and API-free, as before.
+      try {
+        idFromInput = await resolveNationIdFromMention(interaction.client, settings, input);
+      } catch (error) {
+        await interaction.editReply(`❌ ${error.message}`);
+        return;
+      }
+    } else {
+      const linkMatch = input.match(/id=(\d+)/);
+      idFromInput = linkMatch ? Number(linkMatch[1]) : /^\d+$/.test(input) ? Number(input) : null;
+    }
 
     const records = settings.auditHistory.filter((r) =>
       idFromInput !== null ? r.nationId === idFromInput : r.nationName.toLowerCase() === input.toLowerCase()
     );
 
     if (records.length === 0) {
-      await interaction.reply({
-        content: `No audit history found for "${input}". (It only shows up after running an audit command on that nation at least once.)`,
-        ephemeral: true
-      });
+      await interaction.editReply(
+        `No audit history found for "${input}". (It only shows up after running an audit command on that nation at least once.)`
+      );
       return;
     }
 
@@ -69,6 +82,6 @@ module.exports = {
       .setColor(0x3498db)
       .setDescription(`${headline}\n\n${lines.join("\n")}`);
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 };

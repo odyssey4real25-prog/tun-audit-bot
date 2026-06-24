@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require("discord.js");
-const { getNation, resolveNationId } = require("../pnw");
+const { getNation } = require("../pnw");
+const { resolveNationInput } = require("../audit/resolveNationInput");
 const { checks } = require("../audit/checks/others");
 const { runChecks, buildReportEmbed, buildHistoryRecord } = require("../audit/runAudit");
 const { getSettings, saveSettings } = require("../db");
@@ -10,7 +11,7 @@ module.exports = {
     .setName("others")
     .setDescription("Run all non-build audit checks on a nation.")
     .addStringOption((opt) =>
-      opt.setName("nation").setDescription("Nation ID, name, or profile link").setRequired(true)
+      opt.setName("nation").setDescription("Nation ID, name, profile link, or @mention their Discord").setRequired(true)
     ),
 
   async execute(interaction) {
@@ -20,7 +21,7 @@ module.exports = {
 
     let nation;
     try {
-      const nationId = await resolveNationId(interaction.options.getString("nation"));
+      const nationId = await resolveNationInput(interaction.client, settings, interaction.options.getString("nation"));
       nation = await getNation(nationId);
     } catch (error) {
       await interaction.editReply(`❌ Couldn't fetch that nation: ${error.message}`);
