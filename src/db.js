@@ -61,6 +61,10 @@ function defaultSettings() {
     // DMs anyone who matches (respecting a per-nation cooldown so the same
     // nation isn't DM'd every single run if the condition persists).
     autoNotify: { enabled: false, intervalHours: 6, cooldownHours: 24, lastRunAt: null },
+    // Separate from the above — this sends EVERY member their own full
+    // Grand Audit report on a fixed schedule (e.g. weekly), regardless of
+    // whether anything's wrong. Also OFF by default.
+    scheduledReports: { enabled: false, intervalDays: 7, lastRunAt: null },
     // Replaces the old single pass/fail cutoff with 4 tiers. A nation's
     // score lands in whichever tier it's high enough for: Excellent (top),
     // Passing, Needs Improvement, or Failing (bottom, below "average").
@@ -132,6 +136,10 @@ function getSettings(guildId) {
   }
   if (!settings.autoNotify) {
     settings.autoNotify = { enabled: false, intervalHours: 6, cooldownHours: 24, lastRunAt: null };
+    migrated = true;
+  }
+  if (!settings.scheduledReports) {
+    settings.scheduledReports = { enabled: false, intervalDays: 7, lastRunAt: null };
     migrated = true;
   }
   if (settings.scores && settings.scores.check19_map_usage === undefined) {

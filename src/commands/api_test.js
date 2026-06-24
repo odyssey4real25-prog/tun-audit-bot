@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const { getNation } = require("../pnw");
+const { getNationTestSpies } = require("../pnw");
 
 module.exports = {
   minTier: "administrator",
@@ -14,7 +14,7 @@ module.exports = {
     await interaction.deferReply();
 
     try {
-      const nation = await getNation(interaction.options.getInteger("nation_id"));
+      const nation = await getNationTestSpies(interaction.options.getInteger("nation_id"));
 
       // Pretty-print the data we got back, capped so Discord doesn't reject the message.
       const json = JSON.stringify(nation, null, 2);

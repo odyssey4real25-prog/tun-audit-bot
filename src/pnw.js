@@ -332,4 +332,27 @@ async function resolveNationId(input) {
   return id;
 }
 
-module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId };
+// TEMPORARY — used only by /api_test to verify spy-related field names.
+const NATION_TEST_SPIES_QUERY = `
+  query GetNationSpiesTest($id: [Int]) {
+    nations(id: $id, first: 1) {
+      data {
+        id
+        nation_name
+        spies
+        central_intelligence_agency
+      }
+    }
+  }
+`;
+
+async function getNationTestSpies(nationId) {
+  const data = await queryPNW(NATION_TEST_SPIES_QUERY, { id: [nationId] });
+  const nation = data?.nations?.data?.[0];
+  if (!nation) {
+    throw new Error(`No nation found with ID ${nationId}. Double-check the ID.`);
+  }
+  return nation;
+}
+
+module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId, getNationTestSpies };
