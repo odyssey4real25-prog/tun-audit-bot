@@ -55,6 +55,12 @@ function defaultSettings() {
     // Which nations the Raid Requirement applies to, and how many active
     // offensive wars they need (used by Check 13 and the automatic raid DM).
     raidPolicy: { maxCityTier: 14, requiredOffensiveWars: 4 },
+    // The automated DM scheduler is OFF by default — an admin must turn it
+    // on deliberately with /set_auto_notify. When on, it periodically checks
+    // every member for inactivity, unused raid capacity, and full MAP, and
+    // DMs anyone who matches (respecting a per-nation cooldown so the same
+    // nation isn't DM'd every single run if the condition persists).
+    autoNotify: { enabled: false, intervalHours: 6, cooldownHours: 24, lastRunAt: null },
     // Replaces the old single pass/fail cutoff with 4 tiers. A nation's
     // score lands in whichever tier it's high enough for: Excellent (top),
     // Passing, Needs Improvement, or Failing (bottom, below "average").
@@ -122,6 +128,10 @@ function getSettings(guildId) {
   }
   if (!settings.raidPolicy) {
     settings.raidPolicy = { maxCityTier: 14, requiredOffensiveWars: 4 };
+    migrated = true;
+  }
+  if (!settings.autoNotify) {
+    settings.autoNotify = { enabled: false, intervalHours: 6, cooldownHours: 24, lastRunAt: null };
     migrated = true;
   }
   if (settings.scores && settings.scores.check19_map_usage === undefined) {

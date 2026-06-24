@@ -19,7 +19,8 @@ const CHECK_CHOICES = [
   { name: "14 - Resource Control", value: "check14_resource_control" },
   { name: "16 - Activity Check", value: "check16_activity" },
   { name: "17 - Power & Upkeep", value: "check17_power_upkeep" },
-  { name: "18 - Military Fill Check", value: "check18_military_fill" }
+  { name: "18 - Military Fill Check", value: "check18_military_fill" },
+  { name: "19 - MAP Usage", value: "check19_map_usage" }
 ];
 
 module.exports = {

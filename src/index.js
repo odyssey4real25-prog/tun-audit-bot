@@ -8,6 +8,7 @@ const { Client, GatewayIntentBits, MessageFlags } = require("discord.js");
 const { loadCommands } = require("./loadCommands");
 const { getSettings } = require("./db");
 const { getMemberTier, meetsTier } = require("./permissions");
+const { startScheduler } = require("./scheduler");
 
 const { DISCORD_TOKEN } = process.env;
 
@@ -36,6 +37,7 @@ const commands = loadCommands();
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   console.log(`   Loaded ${commands.size} commands: ${[...commands.keys()].join(", ")}`);
+  startScheduler(client);
 });
 
 // Tries to tell the person something went wrong, but never lets that

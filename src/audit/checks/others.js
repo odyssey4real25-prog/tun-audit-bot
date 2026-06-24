@@ -174,6 +174,20 @@ const checks = [
 
       return { passed, detail };
     }
+  },
+  {
+    key: "check19_map_usage",
+    label: "MAP Usage",
+    recommendation: "Use your Military Action Points (MAP) to launch attacks instead of letting them sit at the cap.",
+    run(nation) {
+      const fullWars = nation.offensive_wars
+        .filter((w) => w.turnsleft > 0 && w.att_points >= 12)
+        .map((w) => `War #${w.id} (${w.att_points}/12 MAP)`);
+      return {
+        passed: fullWars.length === 0,
+        detail: fullWars.length === 0 ? "No active offensive wars have MAP sitting at the cap." : fullWars.join("; ")
+      };
+    }
   }
 ];
 

@@ -22,19 +22,37 @@ const commandData = commands.map((cmd) => cmd.data.toJSON());
 
 const rest = new REST().setToken(DISCORD_TOKEN);
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Network hiccups (interrupted connections, SSL blips) happen occasionally
+// and aren't actual problems with your setup — retrying a couple of times
+// before giving up saves you from having to manually re-run this yourself.
+async function registerWithRetry(route, body, maxAttempts = 3) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await rest.put(route, { body });
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      console.warn(`⚠️ Attempt ${attempt} failed (${error.message}), retrying...`);
+      await sleep(attempt * 1000);
+    }
+  }
+}
+
 (async () => {
   try {
     if (DISCORD_GUILD_ID) {
       console.log(`Registering ${commandData.length} commands to guild ${DISCORD_GUILD_ID} (fast, for testing)...`);
-      await rest.put(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, DISCORD_GUILD_ID), {
-        body: commandData
-      });
+      await registerWithRetry(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, DISCORD_GUILD_ID), commandData);
     } else {
       console.log(`Registering ${commandData.length} commands GLOBALLY (can take up to 1 hour to appear)...`);
-      await rest.put(Routes.applicationCommands(DISCORD_CLIENT_ID), { body: commandData });
+      await registerWithRetry(Routes.applicationCommands(DISCORD_CLIENT_ID), commandData);
     }
     console.log("✅ Commands registered successfully.");
   } catch (error) {
-    console.error("❌ Failed to register commands:", error);
+    console.error("❌ Failed to register commands after retrying:", error);
   }
 })();
