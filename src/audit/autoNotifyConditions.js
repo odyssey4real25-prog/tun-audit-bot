@@ -31,6 +31,16 @@ function checkMapFull(nation) {
   return { fullWars };
 }
 
+function checkColorBloc(nation, settings) {
+  const allianceColour = (settings.alliance.colour || "").toLowerCase();
+  if (!allianceColour) return null; // not configured yet, nothing to compare against
+
+  const nationColour = (nation.color || "").toLowerCase();
+  if (nationColour === allianceColour) return null;
+
+  return { allianceColour: settings.alliance.colour, nationColour: nation.color };
+}
+
 function buildInactivityDM(nation, info, allianceName) {
   return new EmbedBuilder()
     .setTitle("⏰ Activity Reminder")
@@ -73,10 +83,24 @@ function buildMapDM(nation, info, allianceName) {
     .setFooter({ text: "This is an automated message — reach out to a mentor or officer if you have questions." });
 }
 
+function buildColorBlocDM(nation, info, allianceName) {
+  return new EmbedBuilder()
+    .setTitle("🎨 Bloc Colour Reminder")
+    .setColor(0xf1c40f)
+    .setDescription(
+      `Hi **${nation.nation_name}**,\n\n` +
+        `This is an automated reminder from **${allianceName}**. Your nation's colour is currently ` +
+        `**${info.nationColour}**, but the alliance bloc colour is **${info.allianceColour}**.\n\n` +
+        "Please switch your nation's colour to match the bloc — this keeps you covered by the alliance's shared colour trade bonus."
+    )
+    .setFooter({ text: "This is an automated message — reach out to a mentor or officer if you have questions." });
+}
+
 const CONDITIONS = [
   { key: "inactivity", check: checkInactivity, buildDM: buildInactivityDM },
   { key: "raid_capacity", check: checkRaidCapacity, buildDM: buildRaidDM },
-  { key: "map_full", check: checkMapFull, buildDM: buildMapDM }
+  { key: "map_full", check: checkMapFull, buildDM: buildMapDM },
+  { key: "color_bloc", check: checkColorBloc, buildDM: buildColorBlocDM }
 ];
 
 module.exports = { CONDITIONS };
