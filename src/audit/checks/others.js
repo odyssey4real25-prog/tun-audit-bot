@@ -49,6 +49,9 @@ const checks = [
       if (!allianceColour) {
         return { passed: true, detail: "No alliance colour configured yet — skipping." };
       }
+      if (nationColour === "beige") {
+        return { passed: true, detail: "Nation is beige (post-war protection) — exempt until it expires." };
+      }
       const passed = nationColour === allianceColour;
       return {
         passed,

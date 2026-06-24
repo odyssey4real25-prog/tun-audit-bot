@@ -37,6 +37,7 @@ function checkColorBloc(nation, settings) {
 
   const nationColour = (nation.color || "").toLowerCase();
   if (nationColour === allianceColour) return null;
+  if (nationColour === "beige") return null; // post-war protection — leave them alone until it expires
 
   return { allianceColour: settings.alliance.colour, nationColour: nation.color };
 }
