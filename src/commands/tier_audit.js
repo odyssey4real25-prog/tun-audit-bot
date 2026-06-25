@@ -1,18 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { auditAllMembers } = require("../audit/allianceAudit");
 const { CATEGORIES, CATEGORY_CHOICES } = require("../audit/categories");
+const { TIER_RANGES, TIER_CHOICES } = require("../audit/tiers");
 const { getSettings } = require("../db");
-
-// Note: these tiers are specific to this overview command, and are
-// intentionally different from the MMR tiers (/set_mmr uses C16-C20/C21+,
-// this command uses C16-C19/C20+) — exactly as requested.
-const TIER_RANGES = {
-  c1_c5: { min: 1, max: 5, label: "C1-C5" },
-  c6_c10: { min: 6, max: 10, label: "C6-C10" },
-  c11_c15: { min: 11, max: 15, label: "C11-C15" },
-  c16_c19: { min: 16, max: 19, label: "C16-C19" },
-  c20_plus: { min: 20, max: Infinity, label: "C20+" }
-};
 
 function chunkLines(lines, maxLength = 1000) {
   const chunks = [];
@@ -34,19 +24,11 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("tier_audit")
     .setDescription("Overview of all members in a city-count tier and their grade scores.")
-    .addStringOption((opt) =>
-      opt
-        .setName("tier")
-        .setDescription("Which city-count tier to show")
-        .setRequired(true)
-        .addChoices(
-          { name: "C1-C5", value: "c1_c5" },
-          { name: "C6-C10", value: "c6_c10" },
-          { name: "C11-C15", value: "c11_c15" },
-          { name: "C16-C19", value: "c16_c19" },
-          { name: "C20+", value: "c20_plus" }
-        )
-    )
+    .addStringOption((opt) => {
+      opt.setName("tier").setDescription("Which city-count tier to show").setRequired(true);
+      for (const choice of TIER_CHOICES) opt.addChoices(choice);
+      return opt;
+    })
     .addStringOption((opt) => {
       opt.setName("category").setDescription("Which audit category to score by").setRequired(true);
       for (const choice of CATEGORY_CHOICES) opt.addChoices(choice);

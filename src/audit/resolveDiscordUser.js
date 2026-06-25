@@ -35,4 +35,30 @@ async function resolveDiscordUser(client, guild, nation) {
   return null;
 }
 
-module.exports = { resolveDiscordUser };
+// Same logic as resolveDiscordUser, but returns a GuildMember instead of a
+// User — needed for anything that manages roles (member.roles.add/remove),
+// since roles only exist in the context of a specific server membership.
+async function resolveGuildMember(guild, nation) {
+  if (nation.discord_id) {
+    try {
+      return await guild.members.fetch(String(nation.discord_id));
+    } catch (error) {
+      // Fall through to the username search below.
+    }
+  }
+
+  if (nation.discord) {
+    try {
+      const results = await guild.members.search({ query: nation.discord, limit: 5 });
+      const exactMatch = results.find((m) => m.user.username.toLowerCase() === nation.discord.toLowerCase());
+      if (exactMatch) return exactMatch;
+      if (results.size === 1) return results.first();
+    } catch (error) {
+      // Fall through to returning null below.
+    }
+  }
+
+  return null;
+}
+
+module.exports = { resolveDiscordUser, resolveGuildMember };

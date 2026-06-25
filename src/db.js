@@ -66,6 +66,14 @@ function defaultSettings() {
     // Grand Audit report on a fixed schedule (e.g. weekly), regardless of
     // whether anything's wrong. Also OFF by default.
     scheduledReports: { enabled: false, intervalDays: 7, lastRunAt: null },
+    // Maps each city-count tier to a Discord role ID, e.g. "Initiate C1-C5".
+    // Configured with /set_tier_role. Null until an admin sets it.
+    tierRoles: { c1_c5: null, c6_c10: null, c11_c15: null, c16_c19: null, c20_plus: null },
+    // When on, periodically gives every member the Discord role matching
+    // their CURRENT city count (and removes any other tier role they no
+    // longer match) — covers both newly-accepted members and existing
+    // members who grew without anyone noticing. Off by default.
+    tierRoleSync: { enabled: false, intervalHours: 12, lastRunAt: null },
     // Replaces the old single pass/fail cutoff with 4 tiers. A nation's
     // score lands in whichever tier it's high enough for: Excellent (top),
     // Passing, Needs Improvement, or Failing (bottom, below "average").
@@ -141,6 +149,14 @@ function getSettings(guildId) {
   }
   if (!settings.scheduledReports) {
     settings.scheduledReports = { enabled: false, intervalDays: 7, lastRunAt: null };
+    migrated = true;
+  }
+  if (!settings.tierRoles) {
+    settings.tierRoles = { c1_c5: null, c6_c10: null, c11_c15: null, c16_c19: null, c20_plus: null };
+    migrated = true;
+  }
+  if (!settings.tierRoleSync) {
+    settings.tierRoleSync = { enabled: false, intervalHours: 12, lastRunAt: null };
     migrated = true;
   }
   if (settings.scores && settings.scores.check19_map_usage === undefined) {
