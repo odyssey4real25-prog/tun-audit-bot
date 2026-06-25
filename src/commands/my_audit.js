@@ -64,6 +64,11 @@ module.exports = {
 
     const categoryKey = interaction.options.getString("category");
 
+    if (nation.vacation_mode_turns > 0) {
+      await interaction.editReply(`ℹ️ **${nation.nation_name}** is currently in Vacation Mode — audits are skipped for VM nations.`);
+      return;
+    }
+
     let embed, percent, pass, grade;
     if (categoryKey === "grand_audit") {
       ({ embed, percent, pass, grade } = runGrandAudit(nation, settings));

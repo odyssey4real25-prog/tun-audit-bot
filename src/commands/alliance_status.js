@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const { getAllianceNations } = require("../pnw");
+const { getAllianceNations, isActiveMember } = require("../pnw");
 const { CONDITIONS } = require("../audit/autoNotifyConditions");
 const { getSettings } = require("../db");
 
@@ -30,7 +30,7 @@ module.exports = {
     let members;
     try {
       const result = await getAllianceNations(settings.alliance.id);
-      members = result.members;
+      members = result.members.filter(isActiveMember);
     } catch (error) {
       await interaction.editReply(`❌ Couldn't fetch alliance nations: ${error.message}`);
       return;

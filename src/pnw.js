@@ -84,6 +84,8 @@ const NATION_QUERY = `
         wars_lost
         discord
         discord_id
+        spies
+        central_intelligence_agency
         money
         food
         coal
@@ -196,6 +198,8 @@ const ALLIANCE_NATIONS_QUERY = `
         wars_lost
         discord
         discord_id
+        spies
+        central_intelligence_agency
         money
         food
         coal
@@ -332,27 +336,11 @@ async function resolveNationId(input) {
   return id;
 }
 
-// TEMPORARY — used only by /api_test to verify spy-related field names.
-const NATION_TEST_SPIES_QUERY = `
-  query GetNationSpiesTest($id: [Int]) {
-    nations(id: $id, first: 1) {
-      data {
-        id
-        nation_name
-        spies
-        central_intelligence_agency
-      }
-    }
-  }
-`;
-
-async function getNationTestSpies(nationId) {
-  const data = await queryPNW(NATION_TEST_SPIES_QUERY, { id: [nationId] });
-  const nation = data?.nations?.data?.[0];
-  if (!nation) {
-    throw new Error(`No nation found with ID ${nationId}. Double-check the ID.`);
-  }
-  return nation;
+// True if a nation is NOT currently in Vacation Mode. Used to exclude VM
+// nations from audits, auto-DMs, and scheduled reports — they're paused,
+// not non-compliant.
+function isActiveMember(nation) {
+  return !(nation.vacation_mode_turns > 0);
 }
 
-module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId, getNationTestSpies };
+module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId, isActiveMember };

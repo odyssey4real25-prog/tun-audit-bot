@@ -191,6 +191,19 @@ const checks = [
         detail: fullWars.length === 0 ? "No active offensive wars have MAP sitting at the cap." : fullWars.join("; ")
       };
     }
+  },
+  {
+    key: "check20_spy_count",
+    label: "Spy Count",
+    recommendation: "Buy spies daily until you're back at your nation's spy cap.",
+    run(nation) {
+      const cap = nation.central_intelligence_agency ? 60 : 50;
+      const passed = nation.spies >= cap;
+      return {
+        passed,
+        detail: passed ? `Spies are full (${nation.spies}/${cap}).` : `Spies are below cap (${nation.spies}/${cap}).`
+      };
+    }
   }
 ];
 

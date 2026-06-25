@@ -28,6 +28,11 @@ module.exports = {
       return;
     }
 
+    if (nation.vacation_mode_turns > 0) {
+      await interaction.editReply(`ℹ️ **${nation.nation_name}** is currently in Vacation Mode — audits are skipped for VM nations.`);
+      return;
+    }
+
     const results = runChecks(nation, checks, settings);
     const { embed, percent, pass, grade } = buildReportEmbed(nation, results, settings, "Infrastructure & Land Audit");
 

@@ -5,7 +5,7 @@
 // fixed schedule — like a personal report card, whether they're doing
 // great or not.
 
-const { getAllianceNations } = require("../pnw");
+const { getAllianceNations, isActiveMember } = require("../pnw");
 const { resolveDiscordUser } = require("./resolveDiscordUser");
 const { runGrandAudit } = require("./grandAudit");
 const { buildHistoryRecord } = require("./runAudit");
@@ -20,9 +20,10 @@ async function runScheduledReportsForGuild(client, guild, settings) {
   if (!settings.alliance.id) return stats;
 
   const { members } = await getAllianceNations(settings.alliance.id);
-  stats.checked = members.length;
+  const activeMembers = members.filter(isActiveMember);
+  stats.checked = activeMembers.length;
 
-  for (const nation of members) {
+  for (const nation of activeMembers) {
     const user = await resolveDiscordUser(client, guild, nation);
     if (!user) {
       stats.skippedNoDiscord += 1;

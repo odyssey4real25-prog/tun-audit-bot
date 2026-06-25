@@ -5,7 +5,7 @@
 // haven't already been DM'd for that same condition within the configured
 // cooldown window, so a persistent condition doesn't spam someone every run.
 
-const { getAllianceNations } = require("../pnw");
+const { getAllianceNations, isActiveMember } = require("../pnw");
 const { resolveDiscordUser } = require("./resolveDiscordUser");
 const { CONDITIONS } = require("./autoNotifyConditions");
 
@@ -31,9 +31,10 @@ async function runAutoNotifyForGuild(client, guild, settings, { ignoreCooldown =
   if (!settings.alliance.id) return stats;
 
   const { members } = await getAllianceNations(settings.alliance.id);
-  stats.checked = members.length;
+  const activeMembers = members.filter(isActiveMember);
+  stats.checked = activeMembers.length;
 
-  for (const nation of members) {
+  for (const nation of activeMembers) {
     // Figure out which conditions actually apply to this nation first,
     // before bothering to look up their Discord account.
     const matches = [];

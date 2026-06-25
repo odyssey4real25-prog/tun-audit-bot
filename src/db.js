@@ -47,7 +47,8 @@ function defaultSettings() {
       check16_activity: 8,
       check17_power_upkeep: 5,
       check18_military_fill: 9,
-      check19_map_usage: 5
+      check19_map_usage: 5,
+      check20_spy_count: 5
     },
     // How many hours of inactivity before a nation is considered inactive
     // (used by Check 16 and the automatic inactivity DM).
@@ -144,6 +145,10 @@ function getSettings(guildId) {
   }
   if (settings.scores && settings.scores.check19_map_usage === undefined) {
     settings.scores.check19_map_usage = 5;
+    migrated = true;
+  }
+  if (settings.scores && settings.scores.check20_spy_count === undefined) {
+    settings.scores.check20_spy_count = 5;
     migrated = true;
   }
   if (!settings.lastNotified) {

@@ -6,7 +6,7 @@
 // nations list, government report) slice the same underlying data their
 // own way without each re-implementing the "loop over the whole alliance" part.
 
-const { getAllianceNations } = require("../pnw");
+const { getAllianceNations, isActiveMember } = require("../pnw");
 const { ALL_CHECKS } = require("./grandAudit");
 const { runChecks } = require("./runAudit");
 const { getGrade, isPassingGrade } = require("./grading");
@@ -17,9 +17,11 @@ function sleep(ms) {
 
 async function auditAllMembers(allianceId, settings, { delayMs = 150, checks = ALL_CHECKS } = {}) {
   const { members } = await getAllianceNations(allianceId);
+  // Vacation Mode nations are paused, not non-compliant — exclude them from audits.
+  const activeMembers = members.filter(isActiveMember);
 
   const auditResults = [];
-  for (const nation of members) {
+  for (const nation of activeMembers) {
     const results = runChecks(nation, checks, settings);
     const maxPossible = results.reduce((sum, r) => sum + r.maxPoints, 0);
     const earned = results.reduce((sum, r) => sum + r.earnedPoints, 0);
