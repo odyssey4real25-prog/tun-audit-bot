@@ -61,6 +61,8 @@ const NATION_QUERY = `
         id
         nation_name
         leader_name
+        date
+        continent
         alliance_id
         alliance_position
         color
@@ -175,6 +177,8 @@ const ALLIANCE_NATIONS_QUERY = `
         id
         nation_name
         leader_name
+        date
+        continent
         alliance_id
         alliance_position
         color
@@ -343,28 +347,4 @@ function isActiveMember(nation) {
   return !(nation.vacation_mode_turns > 0);
 }
 
-// TEMPORARY — used only by /api_test to verify founded/continent field names.
-const NATION_TEST_AGE_QUERY = `
-  query GetNationAgeTest($id: [Int]) {
-    nations(id: $id, first: 1) {
-      data {
-        id
-        nation_name
-        leader_name
-        date
-        continent
-      }
-    }
-  }
-`;
-
-async function getNationTestAge(nationId) {
-  const data = await queryPNW(NATION_TEST_AGE_QUERY, { id: [nationId] });
-  const nation = data?.nations?.data?.[0];
-  if (!nation) {
-    throw new Error(`No nation found with ID ${nationId}. Double-check the ID.`);
-  }
-  return nation;
-}
-
-module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId, isActiveMember, getNationTestAge };
+module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId, isActiveMember };

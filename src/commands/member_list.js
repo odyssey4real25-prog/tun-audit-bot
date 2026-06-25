@@ -2,48 +2,82 @@ const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { getAllianceNations } = require("../pnw");
 const { getSettings } = require("../db");
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+const CONTINENT_NAMES = {
+  na: "North America",
+  sa: "South America",
+  as: "Asia",
+  an: "Antarctica",
+  eu: "Europe",
+  af: "Africa",
+  au: "Australia"
+};
+
+function continentName(code) {
+  return CONTINENT_NAMES[(code || "").toLowerCase()] || code || "Unknown";
 }
 
-// Splits a big list of lines into embed-sized chunks (well under Discord's
-// 4096-character description limit per embed).
-function chunkLines(lines, maxLength = 3500) {
+function ageInDays(dateString) {
+  const founded = new Date(dateString);
+  return Math.floor((Date.now() - founded.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// Truncates and pads text to a fixed width so columns line up in a
+// monospace code block — this is what gives us a real "table" look
+// without Discord supporting actual HTML tables.
+function col(text, width) {
+  const str = String(text);
+  const trimmed = str.length > width - 1 ? str.slice(0, width - 2) + "…" : str;
+  return trimmed.padEnd(width);
+}
+
+const COLUMN_WIDTHS = { nation: 24, leader: 16, cities: 7, age: 8, continent: 14, status: 8 };
+
+function buildHeader() {
+  return (
+    col("Nation", COLUMN_WIDTHS.nation) +
+    col("Leader", COLUMN_WIDTHS.leader) +
+    col("Cities", COLUMN_WIDTHS.cities) +
+    col("Age", COLUMN_WIDTHS.age) +
+    col("Continent", COLUMN_WIDTHS.continent) +
+    col("Status", COLUMN_WIDTHS.status)
+  );
+}
+
+function buildRow(nation) {
+  const status = nation.vacation_mode_turns > 0 ? "VM" : "";
+  return (
+    col(nation.nation_name, COLUMN_WIDTHS.nation) +
+    col(nation.leader_name, COLUMN_WIDTHS.leader) +
+    col(nation.num_cities, COLUMN_WIDTHS.cities) +
+    col(`${ageInDays(nation.date)}d`, COLUMN_WIDTHS.age) +
+    col(continentName(nation.continent), COLUMN_WIDTHS.continent) +
+    col(status, COLUMN_WIDTHS.status)
+  );
+}
+
+// Splits rows into code-block-sized chunks (well under Discord's
+// 4096-character description limit per embed), repeating the header on
+// every page so each page is readable on its own.
+function chunkRows(rows, header, maxLength = 3400) {
   const chunks = [];
-  let current = "";
-  for (const line of lines) {
-    if ((current + "\n" + line).length > maxLength) {
+  let current = header;
+  for (const row of rows) {
+    if ((current + "\n" + row).length > maxLength) {
       chunks.push(current);
-      current = line;
+      current = header + "\n" + row;
     } else {
-      current = current ? `${current}\n${line}` : line;
+      current += "\n" + row;
     }
   }
-  if (current) chunks.push(current);
-  return chunks.length > 0 ? chunks : ["No members found."];
-}
-
-async function getDiscordDisplay(client, nation) {
-  if (nation.discord_id) {
-    try {
-      const user = await client.users.fetch(String(nation.discord_id));
-      return `${user.username} ✅`;
-    } catch (error) {
-      // Verified ID on file, but Discord couldn't find/return that account
-      // (e.g. they deleted it) — fall through to the unverified field below.
-    }
-  }
-  if (nation.discord) {
-    return `${nation.discord} (unverified)`;
-  }
-  return "No Discord linked";
+  chunks.push(current);
+  return chunks;
 }
 
 module.exports = {
   minTier: "mentor",
   data: new SlashCommandBuilder()
     .setName("member_list")
-    .setDescription("List every alliance member with their Discord, city count, and VM status."),
+    .setDescription("List every alliance member with their leader, age, continent, and VM status."),
 
   async execute(interaction) {
     await interaction.deferReply();
@@ -54,7 +88,7 @@ module.exports = {
       return;
     }
 
-    await interaction.editReply("⏳ Building the member list, this may take a minute...");
+    await interaction.editReply("⏳ Building the member list...");
 
     let members;
     try {
@@ -65,29 +99,22 @@ module.exports = {
       return;
     }
 
-    const lines = [];
-    for (const nation of members) {
-      const discordDisplay = await getDiscordDisplay(interaction.client, nation);
-      const vmTag = nation.vacation_mode_turns > 0 ? " 🌴 VM" : "";
-      lines.push(`**${nation.nation_name}** (C${nation.num_cities}) — ${discordDisplay}${vmTag}`);
-      // Only a real delay when we actually hit the Discord API above.
-      if (nation.discord_id) await sleep(100);
-    }
+    const header = buildHeader();
+    const rows = members.map(buildRow);
+    const chunks = chunkRows(rows, header);
 
-    const chunks = chunkLines(lines);
     const embeds = chunks.map((chunk, idx) =>
       new EmbedBuilder()
         .setTitle(`Member List — ${settings.alliance.name} (Page ${idx + 1}/${chunks.length})`)
         .setColor(0x3498db)
-        .setDescription(chunk)
+        .setDescription("```\n" + chunk + "\n```")
     );
 
     // Discord allows max 10 embeds per message — send in batches if there's
     // ever more pages than that (very large alliances).
     const BATCH_SIZE = 10;
     for (let i = 0; i < embeds.length; i += BATCH_SIZE) {
-      const batch = embeds.slice(i, i + BATCH_SIZE);
-      await interaction.followUp({ embeds: batch });
+      await interaction.followUp({ embeds: embeds.slice(i, i + BATCH_SIZE) });
     }
   }
 };
