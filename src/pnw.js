@@ -351,7 +351,7 @@ const NATION_TEST_AGE_QUERY = `
         id
         nation_name
         leader_name
-        founded
+        date
         continent
       }
     }
