@@ -38,7 +38,7 @@ module.exports = {
     await interaction.followUp(
       `✅ Checked **${stats.checked}** member(s). Sent **${stats.dmsSent}** DM(s). ` +
         `${stats.dmsFailed > 0 ? `❌ ${stats.dmsFailed} failed to deliver. ` : ""}` +
-        `⏭️ ${stats.skippedNoDiscord} had no Discord linked, ${stats.skippedCooldown} were on cooldown.`
+        `⏭️ ${stats.skippedNoDiscord} had no Discord linked, ${stats.skippedCooldown} were on cooldown, ${stats.skippedExcludedTier} were in an excluded tier.`
     );
   }
 };

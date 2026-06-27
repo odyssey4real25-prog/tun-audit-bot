@@ -8,6 +8,7 @@
 const { getAllianceNations, isActiveMember } = require("../pnw");
 const { resolveDiscordUser } = require("./resolveDiscordUser");
 const { CONDITIONS } = require("./autoNotifyConditions");
+const { tierKeyFor } = require("./tiers");
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,7 +27,7 @@ function markNotified(settings, nationId, conditionKey) {
 }
 
 async function runAutoNotifyForGuild(client, guild, settings, { ignoreCooldown = false } = {}) {
-  const stats = { checked: 0, dmsSent: 0, dmsFailed: 0, skippedNoDiscord: 0, skippedCooldown: 0 };
+  const stats = { checked: 0, dmsSent: 0, dmsFailed: 0, skippedNoDiscord: 0, skippedCooldown: 0, skippedExcludedTier: 0 };
 
   if (!settings.alliance.id) return stats;
 
@@ -34,7 +35,14 @@ async function runAutoNotifyForGuild(client, guild, settings, { ignoreCooldown =
   const activeMembers = members.filter(isActiveMember);
   stats.checked = activeMembers.length;
 
+  const excludedTiers = settings.autoNotify.excludedTiers || [];
+
   for (const nation of activeMembers) {
+    if (excludedTiers.includes(tierKeyFor(nation.num_cities))) {
+      stats.skippedExcludedTier += 1;
+      continue;
+    }
+
     // Figure out which conditions actually apply to this nation first,
     // before bothering to look up their Discord account.
     const matches = [];

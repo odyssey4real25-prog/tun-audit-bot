@@ -61,7 +61,9 @@ function defaultSettings() {
     // every member for inactivity, unused raid capacity, and full MAP, and
     // DMs anyone who matches (respecting a per-nation cooldown so the same
     // nation isn't DM'd every single run if the condition persists).
-    autoNotify: { enabled: false, intervalHours: 6, cooldownHours: 24, lastRunAt: null },
+    // excludedTiers: city-count tiers (e.g. "c20_plus") that are skipped
+    // entirely by this system — set with /set_auto_notify_tier.
+    autoNotify: { enabled: false, intervalHours: 6, cooldownHours: 24, lastRunAt: null, excludedTiers: [] },
     // Separate from the above — this sends EVERY member their own full
     // Grand Audit report on a fixed schedule (e.g. weekly), regardless of
     // whether anything's wrong. Also OFF by default.
@@ -144,7 +146,11 @@ function getSettings(guildId) {
     migrated = true;
   }
   if (!settings.autoNotify) {
-    settings.autoNotify = { enabled: false, intervalHours: 6, cooldownHours: 24, lastRunAt: null };
+    settings.autoNotify = { enabled: false, intervalHours: 6, cooldownHours: 24, lastRunAt: null, excludedTiers: [] };
+    migrated = true;
+  }
+  if (settings.autoNotify && settings.autoNotify.excludedTiers === undefined) {
+    settings.autoNotify.excludedTiers = [];
     migrated = true;
   }
   if (!settings.scheduledReports) {
