@@ -81,6 +81,18 @@ function defaultSettings() {
     // Passing, Needs Improvement, or Failing (bottom, below "average").
     gradeThresholds: { excellent: 90, good: 80, average: 70 },
     warchestPolicy: {},
+    // Per-nation overrides for specific members, e.g. an officer who's
+    // allowed to hold more than the standard policy. Keyed by nation ID
+    // (as a string). Set with /set_member_warchest, same per-city shape
+    // as the alliance-wide warchestPolicy above.
+    memberWarchestOverrides: {},
+    // Members' personal PnW API keys, encrypted at rest (see crypto.js).
+    // Collected via /link_api_key using a private Discord modal — never
+    // typed as a visible command option. Keyed by nation ID (as a string).
+    // NOTE: actual bank deposits require Politics & War staff to separately
+    // whitelist this bot for the bankDeposit mutation — collecting keys
+    // here does not by itself enable any real fund movement yet.
+    linkedApiKeys: {}, // { "nationId": { encrypted: "...", linkedAt: "isoDate" } }
     resourcePolicy: { upkeepBufferDays: 5 },
     auditChannelId: null,
     roleMap: {}, // { "discordRoleId": "mentor" | "government" | "administrator" }
@@ -163,6 +175,14 @@ function getSettings(guildId) {
   }
   if (!settings.tierRoleSync) {
     settings.tierRoleSync = { enabled: false, intervalHours: 12, lastRunAt: null };
+    migrated = true;
+  }
+  if (!settings.memberWarchestOverrides) {
+    settings.memberWarchestOverrides = {};
+    migrated = true;
+  }
+  if (!settings.linkedApiKeys) {
+    settings.linkedApiKeys = {};
     migrated = true;
   }
   if (settings.scores && settings.scores.check19_map_usage === undefined) {

@@ -347,4 +347,24 @@ function isActiveMember(nation) {
   return !(nation.vacation_mode_turns > 0);
 }
 
-module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId, isActiveMember };
+// Confirms a personal API key (submitted by a member, not our bot's own
+// key) actually authenticates against the PnW API. This only proves the
+// key is valid and active — it can't prove it belongs to a specific
+// nation, since public nation data is readable with any valid key. True
+// ownership is enforced by PnW's own backend at the moment a deposit is
+// actually attempted (which additionally requires a separate whitelisted
+// bot key from PnW staff — see README).
+async function verifyPersonalApiKey(apiKey) {
+  const response = await fetch(`${PNW_API_URL}?api_key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: "{ nations(first: 1) { data { id } } }" })
+  });
+  const json = await response.json();
+  if (json.errors && json.errors.length > 0) {
+    throw new Error(json.errors.map((e) => e.message).join(" | "));
+  }
+  return true;
+}
+
+module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId, isActiveMember, verifyPersonalApiKey };

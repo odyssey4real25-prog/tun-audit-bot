@@ -81,13 +81,18 @@ const checks = [
   {
     key: "check14_resource_control",
     label: "Resource Control",
-    recommendation: "Spend down the listed resources to stay within your alliance's warchest policy.",
+    recommendation: "Spend down the listed resources to stay within your warchest policy.",
     run(nation, settings) {
-      // Warchest targets are set PER CITY (/set_warchest_policy), so the
-      // actual requirement for this nation is per-city amount × city count.
+      // A specific nation can have its own override policy (/set_member_warchest)
+      // for some or all resources; anything not overridden falls back to the
+      // alliance-wide policy (/set_warchest_policy).
+      const policy = { ...settings.warchestPolicy, ...(settings.memberWarchestOverrides[String(nation.id)] || {}) };
+
+      // Warchest targets are set PER CITY, so the actual requirement for
+      // this nation is per-city amount × city count.
       const violations = [];
       for (const resource of RESOURCE_FIELDS) {
-        const perCity = settings.warchestPolicy[resource];
+        const perCity = policy[resource];
         if (perCity === undefined || perCity === null) continue; // not tracked
         const required = perCity * nation.num_cities;
         if (nation[resource] > required) {

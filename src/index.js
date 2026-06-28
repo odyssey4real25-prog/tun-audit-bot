@@ -34,6 +34,17 @@ const client = new Client({
 
 const commands = loadCommands();
 
+// Some commands (like /link_api_key) open a private modal form instead of
+// answering directly. When the form is submitted, Discord sends a SEPARATE
+// interaction (not a chat command) — this maps each modal's custom ID back
+// to the command that knows how to handle its submission.
+const modalHandlers = new Map();
+for (const command of commands.values()) {
+  if (command.modalCustomId && command.handleModalSubmit) {
+    modalHandlers.set(command.modalCustomId, command);
+  }
+}
+
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   console.log(`   Loaded ${commands.size} commands: ${[...commands.keys()].join(", ")}`);
@@ -57,6 +68,18 @@ async function safeErrorReply(interaction, content) {
 
 client.on("interactionCreate", async (interaction) => {
   try {
+    if (interaction.isModalSubmit()) {
+      const handler = modalHandlers.get(interaction.customId);
+      if (!handler) return;
+      try {
+        await handler.handleModalSubmit(interaction);
+      } catch (error) {
+        console.error(`Error handling modal submit for ${interaction.customId}:`, error);
+        await safeErrorReply(interaction, "⚠️ Something went wrong processing that. Please try again.");
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
     const command = commands.get(interaction.commandName);

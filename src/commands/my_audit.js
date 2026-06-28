@@ -3,23 +3,8 @@ const { getAllianceNations } = require("../pnw");
 const { CATEGORIES, CATEGORY_CHOICES } = require("../audit/categories");
 const { runChecks, buildReportEmbed, buildHistoryRecord } = require("../audit/runAudit");
 const { runGrandAudit } = require("../audit/grandAudit");
+const { findMyNation } = require("../audit/findMyNation");
 const { getSettings, saveSettings } = require("../db");
-
-// Finds the nation belonging to whoever ran the command, using whatever
-// Discord info PnW has on file for each nation — no separate "link your
-// account" step needed, but it only works if that nation's Discord field
-// on the PnW website matches their actual Discord account.
-function findMyNation(members, discordUser) {
-  const byVerifiedId = members.find((n) => n.discord_id && String(n.discord_id) === discordUser.id);
-  if (byVerifiedId) return byVerifiedId;
-
-  const byUsername = members.filter(
-    (n) => n.discord && n.discord.toLowerCase() === discordUser.username.toLowerCase()
-  );
-  if (byUsername.length === 1) return byUsername[0];
-
-  return null;
-}
 
 module.exports = {
   minTier: "member",
