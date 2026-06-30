@@ -16,6 +16,7 @@ const { getSettings, saveSettings } = require("./db");
 const { runAutoNotifyForGuild } = require("./audit/autoNotify");
 const { runScheduledReportsForGuild } = require("./audit/scheduledReports");
 const { runTierRoleSyncForGuild } = require("./audit/tierRoleSync");
+const { runUnscRotation } = require("./audit/unscRotation");
 
 const TICK_INTERVAL_MS = 15 * 60 * 1000; // check every 15 minutes
 const currentlyRunning = new Set(); // in-memory lock, keyed as "guildId:jobName"
@@ -94,12 +95,36 @@ async function runTierRoleSyncJob(client, guild, settings) {
   }
 }
 
+async function runUnscRotationJob(client, guild, settings) {
+  const lockKey = `${guild.id}:unscRotation`;
+  if (currentlyRunning.has(lockKey)) return;
+  if (!settings.unscRotation?.enabled || !settings.alliance.id) return;
+  if (!isDue(settings.unscRotation.lastRunAt, settings.unscRotation.intervalDays * 24 * 60 * 60 * 1000)) return;
+
+  currentlyRunning.add(lockKey);
+  try {
+    console.log(`[unscRotation] Starting scheduled rotation for guild ${guild.id} (${guild.name})...`);
+    const summary = await runUnscRotation(client, guild, settings);
+    settings.unscRotation.lastRunAt = new Date().toISOString();
+    saveSettings(guild.id, settings);
+    console.log(
+      `[unscRotation] Finished guild ${guild.id}: removed ${summary.outgoingRemoved}, seated ${summary.newlySeated.length}, ` +
+        `eligible ${summary.eligibleCount}, excluded ${summary.excludedCount}, errors ${summary.outgoingErrors}`
+    );
+  } catch (error) {
+    console.error(`[unscRotation] Error running rotation for guild ${guild.id}:`, error);
+  } finally {
+    currentlyRunning.delete(lockKey);
+  }
+}
+
 async function tick(client) {
   for (const guild of client.guilds.cache.values()) {
     const settings = getSettings(guild.id);
     await runAutoNotifyJob(client, guild, settings);
     await runScheduledReportsJob(client, guild, settings);
     await runTierRoleSyncJob(client, guild, settings);
+    await runUnscRotationJob(client, guild, settings);
   }
 }
 

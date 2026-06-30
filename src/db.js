@@ -86,6 +86,22 @@ function defaultSettings() {
     // (as a string). Set with /set_member_warchest, same per-city shape
     // as the alliance-wide warchestPolicy above.
     memberWarchestOverrides: {},
+    // Configurable rotating-council feature (e.g. "Non-permanent UNSC
+    // Members"). Picks a fresh set of eligible members on a schedule,
+    // assigns them a Discord role for the duration, then rotates them out
+    // automatically. Off by default — set up with /set_unsc_config.
+    unscRotation: {
+      enabled: false,
+      seatCount: 10,
+      minSeniorityDays: 60,
+      intervalDays: 30,
+      nonPermanentRoleId: null,
+      permanentRoleId: null, // members with this role are always excluded
+      announceChannelId: null,
+      currentTermNationIds: [], // who's currently seated
+      termStartedAt: null,
+      lastRunAt: null
+    },
     // Members' personal PnW API keys, encrypted at rest (see crypto.js).
     // Collected via /link_api_key using a private Discord modal — never
     // typed as a visible command option. Keyed by nation ID (as a string).
@@ -179,6 +195,21 @@ function getSettings(guildId) {
   }
   if (!settings.memberWarchestOverrides) {
     settings.memberWarchestOverrides = {};
+    migrated = true;
+  }
+  if (!settings.unscRotation) {
+    settings.unscRotation = {
+      enabled: false,
+      seatCount: 10,
+      minSeniorityDays: 60,
+      intervalDays: 30,
+      nonPermanentRoleId: null,
+      permanentRoleId: null,
+      announceChannelId: null,
+      currentTermNationIds: [],
+      termStartedAt: null,
+      lastRunAt: null
+    };
     migrated = true;
   }
   if (!settings.linkedApiKeys) {
