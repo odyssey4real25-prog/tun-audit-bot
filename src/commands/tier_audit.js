@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { auditAllMembers } = require("../audit/allianceAudit");
 const { CATEGORIES, CATEGORY_CHOICES } = require("../audit/categories");
 const { TIER_RANGES, TIER_CHOICES } = require("../audit/tiers");
+const { getAllianceName } = require("../pnw");
 const { getSettings } = require("../db");
 
 function chunkLines(lines, maxLength = 1000) {
@@ -33,16 +34,23 @@ module.exports = {
       opt.setName("category").setDescription("Which audit category to score by").setRequired(true);
       for (const choice of CATEGORY_CHOICES) opt.addChoices(choice);
       return opt;
-    }),
+    })
+    .addIntegerOption((opt) =>
+      opt.setName("alliance_id").setDescription("Audit a different alliance by PnW ID. Leave blank to use your home alliance.")
+    ),
 
   async execute(interaction) {
     await interaction.deferReply();
 
     const settings = getSettings(interaction.guildId);
-    if (!settings.alliance.id) {
-      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first.");
+    const targetAllianceId = interaction.options.getInteger("alliance_id") || settings.alliance.id;
+    if (!targetAllianceId) {
+      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first, or provide an alliance_id.");
       return;
     }
+    const allianceName = targetAllianceId === settings.alliance.id
+      ? (settings.alliance.name || `Alliance ${targetAllianceId}`)
+      : await getAllianceName(targetAllianceId);
 
     const tierKey = interaction.options.getString("tier");
     const categoryKey = interaction.options.getString("category");
@@ -53,7 +61,7 @@ module.exports = {
 
     let auditResults;
     try {
-      auditResults = await auditAllMembers(settings.alliance.id, settings, { checks });
+      auditResults = await auditAllMembers(targetAllianceId, settings, { checks });
     } catch (error) {
       await interaction.editReply(`❌ Couldn't fetch alliance nations: ${error.message}`);
       return;
@@ -68,7 +76,7 @@ module.exports = {
     );
 
     const embed = new EmbedBuilder()
-      .setTitle(`${tier.label} Overview — ${label} — ${settings.alliance.name}`)
+      .setTitle(`${tier.label} Overview — ${label} — ${allianceName}`)
       .setColor(0x3498db)
       .setDescription(`**${inTier.length}** member(s) in this tier.`);
 

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const { getAllianceNations } = require("../pnw");
+const { getAllianceNations, getAllianceName } = require("../pnw");
 const { getSettings } = require("../db");
 
 const CONTINENT_NAMES = {
@@ -77,22 +77,29 @@ module.exports = {
   minTier: "mentor",
   data: new SlashCommandBuilder()
     .setName("member_list")
-    .setDescription("List every alliance member with their leader, age, continent, and VM status."),
+    .setDescription("List every alliance member with their leader, age, continent, and VM status.")
+    .addIntegerOption((opt) =>
+      opt.setName("alliance_id").setDescription("List a different alliance by PnW ID. Leave blank to use your home alliance.")
+    ),
 
   async execute(interaction) {
     await interaction.deferReply();
 
     const settings = getSettings(interaction.guildId);
-    if (!settings.alliance.id) {
-      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first.");
+    const targetAllianceId = interaction.options.getInteger("alliance_id") || settings.alliance.id;
+    if (!targetAllianceId) {
+      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first, or provide an alliance_id.");
       return;
     }
+    const allianceName = targetAllianceId === settings.alliance.id
+      ? (settings.alliance.name || `Alliance ${targetAllianceId}`)
+      : await getAllianceName(targetAllianceId);
 
     await interaction.editReply("⏳ Building the member list...");
 
     let members;
     try {
-      const result = await getAllianceNations(settings.alliance.id);
+      const result = await getAllianceNations(targetAllianceId);
       members = [...result.members].sort((a, b) => a.nation_name.localeCompare(b.nation_name));
     } catch (error) {
       await interaction.editReply(`❌ Couldn't fetch alliance nations: ${error.message}`);
@@ -105,7 +112,7 @@ module.exports = {
 
     const embeds = chunks.map((chunk, idx) =>
       new EmbedBuilder()
-        .setTitle(`Member List — ${settings.alliance.name} (Page ${idx + 1}/${chunks.length})`)
+        .setTitle(`Member List — ${allianceName} (Page ${idx + 1}/${chunks.length})`)
         .setColor(0x3498db)
         .setDescription("```\n" + chunk + "\n```")
     );

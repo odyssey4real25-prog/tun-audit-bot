@@ -88,10 +88,20 @@ const checks = [
       // alliance-wide policy (/set_warchest_policy).
       const policy = { ...settings.warchestPolicy, ...(settings.memberWarchestOverrides[String(nation.id)] || {}) };
 
+      // A nation can personally hide their resources (a privacy toggle on
+      // their own account, not tied to alliance membership) — when they
+      // have, the API returns -1 for every resource. Treat that as
+      // "can't check this," not as a real (and accidentally always-passing) value.
+      const hiddenResources = RESOURCE_FIELDS.filter((r) => nation[r] === -1);
+      if (hiddenResources.length === RESOURCE_FIELDS.length) {
+        return { passed: true, detail: "This nation has hidden their resources — can't check this." };
+      }
+
       // Warchest targets are set PER CITY, so the actual requirement for
       // this nation is per-city amount × city count.
       const violations = [];
       for (const resource of RESOURCE_FIELDS) {
+        if (nation[resource] === -1) continue; // hidden, can't check
         const perCity = policy[resource];
         if (perCity === undefined || perCity === null) continue; // not tracked
         const required = perCity * nation.num_cities;
@@ -135,7 +145,10 @@ const checks = [
         nation.aircraft * DAILY_UPKEEP.aircraft +
         nation.ships * DAILY_UPKEEP.ships;
 
-      const hasUpkeep = nation.money >= dailyCost;
+      // -1 means this nation has hidden their money (a personal privacy
+      // toggle) — we can't check upkeep for them, so don't penalize it.
+      const moneyHidden = nation.money === -1;
+      const hasUpkeep = moneyHidden || nation.money >= dailyCost;
 
       const problems = [];
       if (unpowered.length > 0) problems.push(`Unpowered: ${unpowered.join(", ")}`);
@@ -143,7 +156,10 @@ const checks = [
 
       return {
         passed: problems.length === 0,
-        detail: problems.length === 0 ? "All cities powered, at least 1 day of upkeep available." : problems.join("; ")
+        detail:
+          problems.length === 0
+            ? `All cities powered${moneyHidden ? " (money hidden, upkeep not checked)" : ", at least 1 day of upkeep available"}.`
+            : problems.join("; ")
       };
     }
   },

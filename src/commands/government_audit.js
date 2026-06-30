@@ -1,27 +1,37 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { auditAllMembers } = require("../audit/allianceAudit");
+const { getAllianceName } = require("../pnw");
 const { getSettings, saveSettings } = require("../db");
 
 module.exports = {
   minTier: "government",
   data: new SlashCommandBuilder()
     .setName("government_audit")
-    .setDescription("Run a Grand Audit on every member and show alliance-wide compliance stats."),
+    .setDescription("Run a Grand Audit on every member and show alliance-wide compliance stats.")
+    .addIntegerOption((opt) =>
+      opt.setName("alliance_id").setDescription("Audit a different alliance by PnW ID. Leave blank to use your home alliance.")
+    ),
 
   async execute(interaction) {
     await interaction.deferReply();
 
     const settings = getSettings(interaction.guildId);
-    if (!settings.alliance.id) {
-      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first.");
+    const targetAllianceId = interaction.options.getInteger("alliance_id") || settings.alliance.id;
+
+    if (!targetAllianceId) {
+      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first, or provide an alliance_id.");
       return;
     }
 
-    await interaction.editReply(`⏳ Auditing all members, this may take a minute...`);
+    const allianceName = targetAllianceId === settings.alliance.id
+      ? (settings.alliance.name || `Alliance ${targetAllianceId}`)
+      : await getAllianceName(targetAllianceId);
+
+    await interaction.editReply(`⏳ Auditing **${allianceName}** members, this may take a minute...`);
 
     let auditResults;
     try {
-      auditResults = await auditAllMembers(settings.alliance.id, settings);
+      auditResults = await auditAllMembers(targetAllianceId, settings);
     } catch (error) {
       await interaction.editReply(`❌ Couldn't fetch alliance nations: ${error.message}`);
       return;
@@ -62,7 +72,7 @@ module.exports = {
         .join("\n") || "None — great job!";
 
     const embed = new EmbedBuilder()
-      .setTitle(`Government Audit — ${settings.alliance.name}`)
+      .setTitle(`Government Audit — ${allianceName}`)
       .setColor(0x3498db)
       .addFields(
         { name: "Members Audited", value: String(auditResults.length), inline: true },

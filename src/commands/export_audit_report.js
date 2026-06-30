@@ -5,6 +5,7 @@ const os = require("os");
 const fs = require("fs");
 const { auditAllMembers } = require("../audit/allianceAudit");
 const { CATEGORIES, CATEGORY_CHOICES } = require("../audit/categories");
+const { getAllianceName } = require("../pnw");
 const { getSettings } = require("../db");
 
 const GRADE_FILL_COLORS = {
@@ -23,25 +24,32 @@ module.exports = {
       opt.setName("category").setDescription("Which audit category to export").setRequired(true);
       for (const choice of CATEGORY_CHOICES) opt.addChoices(choice);
       return opt;
-    }),
+    })
+    .addIntegerOption((opt) =>
+      opt.setName("alliance_id").setDescription("Audit a different alliance by PnW ID. Leave blank to use your home alliance.")
+    ),
 
   async execute(interaction) {
     await interaction.deferReply();
 
     const settings = getSettings(interaction.guildId);
-    if (!settings.alliance.id) {
-      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first.");
+    const targetAllianceId = interaction.options.getInteger("alliance_id") || settings.alliance.id;
+    if (!targetAllianceId) {
+      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first, or provide an alliance_id.");
       return;
     }
+    const allianceName = targetAllianceId === settings.alliance.id
+      ? (settings.alliance.name || `Alliance ${targetAllianceId}`)
+      : await getAllianceName(targetAllianceId);
 
     const categoryKey = interaction.options.getString("category");
     const { checks, label } = CATEGORIES[categoryKey];
 
-    await interaction.editReply("⏳ Auditing all members, this may take a minute...");
+    await interaction.editReply(`⏳ Auditing **${allianceName}** members, this may take a minute...`);
 
     let auditResults;
     try {
-      auditResults = await auditAllMembers(settings.alliance.id, settings, { checks });
+      auditResults = await auditAllMembers(targetAllianceId, settings, { checks });
     } catch (error) {
       await interaction.editReply(`❌ Couldn't fetch alliance nations: ${error.message}`);
       return;
@@ -112,7 +120,7 @@ module.exports = {
       await workbook.xlsx.writeFile(filePath);
       const attachment = new AttachmentBuilder(filePath, { name: `${label.replace(/\s+/g, "_")}_Audit.xlsx` });
       await interaction.followUp({
-        content: `✅ Exported **${label}** audit for **${auditResults.length}** members.`,
+        content: `✅ Exported **${label}** audit for **${allianceName}** (**${auditResults.length}** members).`,
         files: [attachment]
       });
     } catch (error) {

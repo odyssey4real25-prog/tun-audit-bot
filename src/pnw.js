@@ -367,4 +367,22 @@ async function verifyPersonalApiKey(apiKey) {
   return true;
 }
 
-module.exports = { queryPNW, getNation, getAllianceNations, resolveNationId, isActiveMember, verifyPersonalApiKey };
+// Used when a command targets a DIFFERENT alliance than the one configured
+// with /set_alliance, just to get a display name for the report title.
+async function getAllianceName(allianceId) {
+  const data = await queryPNW(`query GetAllianceName($id: [Int]) { alliances(id: $id, first: 1) { data { id name } } }`, {
+    id: [allianceId]
+  });
+  const alliance = data?.alliances?.data?.[0];
+  return alliance ? alliance.name : `Alliance ${allianceId}`;
+}
+
+module.exports = {
+  queryPNW,
+  getNation,
+  getAllianceNations,
+  resolveNationId,
+  isActiveMember,
+  verifyPersonalApiKey,
+  getAllianceName
+};
