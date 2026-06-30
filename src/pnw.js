@@ -160,6 +160,18 @@ async function getNation(nationId) {
   // which several audit checks (like the infrastructure cap) depend on.
   nation.cities = [...nation.cities].sort((a, b) => Number(a.id) - Number(b.id));
 
+  // Attach this nation's OWN alliance's bloc colour, so Check 12 can
+  // compare a foreign nation against their own alliance rather than ours.
+  // A nation with no alliance (or alliance_id 0) has nothing to attach.
+  if (nation.alliance_id && Number(nation.alliance_id) !== 0) {
+    try {
+      const allianceInfo = await getAllianceColor(nation.alliance_id);
+      nation._ownAllianceColor = allianceInfo ? allianceInfo.color : null;
+    } catch (error) {
+      nation._ownAllianceColor = null; // non-fatal — Check 12 just skips if this is missing
+    }
+  }
+
   return nation;
 }
 
@@ -286,6 +298,18 @@ async function getAllianceNations(allianceId) {
   // Applicants aren't accepted members yet, so they're excluded from audits.
   const members = allNations.filter((n) => (n.alliance_position || "").toUpperCase() !== "APPLICANT");
 
+  // Every nation here belongs to the SAME alliance (allianceId), so we only
+  // need to look up its bloc colour once and attach it to everyone — used
+  // by Check 12 to correctly compare against the alliance actually being
+  // audited, whether that's our own or a foreign one.
+  try {
+    const allianceInfo = await getAllianceColor(allianceId);
+    const colour = allianceInfo ? allianceInfo.color : null;
+    for (const nation of members) nation._ownAllianceColor = colour;
+  } catch (error) {
+    for (const nation of members) nation._ownAllianceColor = null; // non-fatal
+  }
+
   return { members, applicantCount: allNations.length - members.length, totalFetched: allNations.length };
 }
 
@@ -377,6 +401,51 @@ async function getAllianceName(allianceId) {
   return alliance ? alliance.name : `Alliance ${allianceId}`;
 }
 
+// Used by Check 12 (Alliance Colour Bloc) to compare a nation against ITS
+// OWN alliance's bloc colour, rather than assuming it's our configured
+// home alliance — important when auditing foreign nations.
+async function getAllianceColor(allianceId) {
+  if (!allianceId) return null;
+  const data = await queryPNW(`query GetAllianceColor($id: [Int]) { alliances(id: $id, first: 1) { data { id name color } } }`, {
+    id: [allianceId]
+  });
+  const alliance = data?.alliances?.data?.[0];
+  return alliance ? { name: alliance.name, color: alliance.color } : null;
+}
+
+// Looks up an alliance's ID by name. Used when someone types an alliance
+// name instead of an ID/link in a slash command.
+async function findAllianceIdByName(name) {
+  const variants = [...new Set([name, name.toUpperCase(), name.toLowerCase(), titleCase(name)])];
+  for (const variant of variants) {
+    const data = await queryPNW(`query FindAllianceByName($name: [String]) { alliances(name: $name, first: 5) { data { id name } } }`, {
+      name: [variant]
+    });
+    const match = data?.alliances?.data?.[0];
+    if (match) return Number(match.id);
+  }
+  return null;
+}
+
+// Accepts whatever someone typed into an "alliance" option — a plain ID
+// (e.g. "14124"), an alliance page link (e.g.
+// "https://politicsandwar.com/alliance/id=14124"), or an alliance name
+// (e.g. "The Union of Nations") — and figures out the alliance ID.
+async function resolveAllianceId(input) {
+  const trimmed = String(input).trim();
+
+  const linkMatch = trimmed.match(/id=(\d+)/);
+  if (linkMatch) return Number(linkMatch[1]);
+
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+
+  const id = await findAllianceIdByName(trimmed);
+  if (!id) {
+    throw new Error(`Couldn't find an alliance named "${trimmed}". Check the spelling, or try the alliance ID or page link instead.`);
+  }
+  return id;
+}
+
 module.exports = {
   queryPNW,
   getNation,
@@ -384,5 +453,7 @@ module.exports = {
   resolveNationId,
   isActiveMember,
   verifyPersonalApiKey,
-  getAllianceName
+  getAllianceName,
+  getAllianceColor,
+  resolveAllianceId
 };

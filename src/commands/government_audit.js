@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const { auditAllMembers } = require("../audit/allianceAudit");
-const { getAllianceName } = require("../pnw");
+const { getAllianceName, resolveAllianceId } = require("../pnw");
 const { getSettings, saveSettings } = require("../db");
 
 module.exports = {
@@ -8,18 +8,29 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("government_audit")
     .setDescription("Run a Grand Audit on every member and show alliance-wide compliance stats.")
-    .addIntegerOption((opt) =>
-      opt.setName("alliance_id").setDescription("Audit a different alliance by PnW ID. Leave blank to use your home alliance.")
+    .addStringOption((opt) =>
+      opt.setName("alliance").setDescription("Audit a different alliance by ID, name, or link. Leave blank to use your home alliance.")
     ),
 
   async execute(interaction) {
     await interaction.deferReply();
 
     const settings = getSettings(interaction.guildId);
-    const targetAllianceId = interaction.options.getInteger("alliance_id") || settings.alliance.id;
+    const allianceInput = interaction.options.getString("alliance");
+    let targetAllianceId;
+    if (allianceInput) {
+      try {
+        targetAllianceId = await resolveAllianceId(allianceInput);
+      } catch (error) {
+        await interaction.editReply(`❌ ${error.message}`);
+        return;
+      }
+    } else {
+      targetAllianceId = settings.alliance.id;
+    }
 
     if (!targetAllianceId) {
-      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first, or provide an alliance_id.");
+      await interaction.editReply("❌ No alliance registered yet — run /set_alliance first, or provide an alliance.");
       return;
     }
 

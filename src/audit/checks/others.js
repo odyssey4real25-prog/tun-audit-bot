@@ -50,12 +50,21 @@ const checks = [
   {
     key: "check12_colour_bloc",
     label: "Alliance Colour Bloc",
-    recommendation: "Change your nation's color to match the alliance's bloc color.",
+    recommendation: "Change your nation's color to match your alliance's bloc color.",
     run(nation, settings) {
-      const allianceColour = (settings.alliance.colour || "").toLowerCase();
+      // When this nation belongs to our own configured home alliance, use
+      // our configured bloc colour. Otherwise (auditing a foreign nation),
+      // use THEIR alliance's actual bloc colour — pre-fetched and attached
+      // as nation._ownAllianceColor before checks run (see runAudit.js).
+      // This avoids comparing a foreign nation against OUR colour, which
+      // would be meaningless.
+      const isOwnAlliance = String(nation.alliance_id) === String(settings.alliance.id);
+      const allianceColourRaw = isOwnAlliance ? settings.alliance.colour : nation._ownAllianceColor;
+      const allianceColour = (allianceColourRaw || "").toLowerCase();
       const nationColour = (nation.color || "").toLowerCase();
+
       if (!allianceColour) {
-        return { passed: true, detail: "No alliance colour configured yet — skipping." };
+        return { passed: true, detail: "No alliance colour to compare against — skipping." };
       }
       if (nationColour === "beige") {
         return { passed: true, detail: "Nation is beige (post-war protection) — exempt until it expires." };
@@ -65,7 +74,7 @@ const checks = [
         passed,
         detail: passed
           ? `Nation is on bloc colour (${nation.color}).`
-          : `Nation is ${nation.color}, expected ${settings.alliance.colour}.`
+          : `Nation is ${nation.color}, expected ${allianceColourRaw}.`
       };
     }
   },
