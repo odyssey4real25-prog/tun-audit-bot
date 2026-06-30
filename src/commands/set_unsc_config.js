@@ -53,10 +53,7 @@ module.exports = {
           `**Non-permanent role**: ${config.nonPermanentRoleId ? `<@&${config.nonPermanentRoleId}>` : "Not set"}\n` +
           `**Permanent role (excluded)**: ${config.permanentRoleId ? `<@&${config.permanentRoleId}>` : "Not set"}\n` +
           `**Announce channel**: ${config.announceChannelId ? `<#${config.announceChannelId}>` : "Not set"}`
-      )
-      .setFooter({
-        text: "Note: 'seniority' here means nation age (days since founding), since Politics & War's API doesn't expose a true alliance-join date."
-      });
+      );
 
     await interaction.reply({ embeds: [embed] });
   }

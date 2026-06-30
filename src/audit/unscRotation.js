@@ -53,12 +53,11 @@ async function findEligibleNations(guild, settings, members) {
       continue;
     }
 
-    // Seniority is nation age (days since founding) — see /set_unsc_config
-    // for why this is the practical proxy used instead of true
-    // alliance-join-date, which Politics & War's API doesn't expose.
-    const seniorityDays = Math.floor((Date.now() - new Date(nation.date).getTime()) / (1000 * 60 * 60 * 24));
+    // Real alliance seniority (days as a member of THIS alliance), confirmed
+    // available directly from the API — shown publicly on every nation's page.
+    const seniorityDays = nation.alliance_seniority ?? 0;
     if (seniorityDays < config.minSeniorityDays) {
-      excluded.push({ nation, reason: `Only ${seniorityDays} days old (needs ${config.minSeniorityDays}+)` });
+      excluded.push({ nation, reason: `Only ${seniorityDays} days alliance seniority (needs ${config.minSeniorityDays}+)` });
       continue;
     }
 
@@ -135,7 +134,7 @@ async function runUnscRotation(client, guild, settings) {
     const channel = guild.channels.cache.get(config.announceChannelId);
     if (channel) {
       const lines = selected.map(
-        ({ nation, member }) => `**${nation.nation_name}** — <@${member.id}> (${Math.floor((Date.now() - new Date(nation.date).getTime()) / 86400000)} days old)`
+        ({ nation, member }) => `**${nation.nation_name}** — <@${member.id}> (${nation.alliance_seniority} days seniority)`
       );
 
       const embed = new EmbedBuilder()

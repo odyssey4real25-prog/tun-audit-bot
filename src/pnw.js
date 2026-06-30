@@ -64,6 +64,7 @@ const NATION_QUERY = `
         date
         continent
         alliance_id
+        alliance_seniority
         alliance_position
         color
         score
@@ -192,6 +193,7 @@ const ALLIANCE_NATIONS_QUERY = `
         date
         continent
         alliance_id
+        alliance_seniority
         alliance_position
         color
         score
@@ -460,28 +462,6 @@ async function resolveAllianceId(input) {
   return id;
 }
 
-// TEMPORARY — used only by /api_test to check for an alliance seniority field.
-const NATION_TEST_SENIORITY_QUERY = `
-  query GetNationSeniorityTest($id: [Int]) {
-    nations(id: $id, first: 1) {
-      data {
-        id
-        nation_name
-        alliance_seniority
-      }
-    }
-  }
-`;
-
-async function getNationTestSeniority(nationId) {
-  const data = await queryPNW(NATION_TEST_SENIORITY_QUERY, { id: [nationId] });
-  const nation = data?.nations?.data?.[0];
-  if (!nation) {
-    throw new Error(`No nation found with ID ${nationId}. Double-check the ID.`);
-  }
-  return nation;
-}
-
 module.exports = {
   queryPNW,
   getNation,
@@ -491,6 +471,5 @@ module.exports = {
   verifyPersonalApiKey,
   getAllianceName,
   getAllianceColor,
-  resolveAllianceId,
-  getNationTestSeniority
+  resolveAllianceId
 };
