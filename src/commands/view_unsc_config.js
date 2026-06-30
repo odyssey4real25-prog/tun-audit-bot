@@ -23,6 +23,7 @@ module.exports = {
           `**Term length**: ${config.intervalDays} days\n` +
           `**Non-permanent role**: ${config.nonPermanentRoleId ? `<@&${config.nonPermanentRoleId}>` : "Not set"}\n` +
           `**Permanent role (excluded)**: ${config.permanentRoleId ? `<@&${config.permanentRoleId}>` : "Not set"}\n` +
+          `**Announcement ping role**: ${config.pingRoleId ? `<@&${config.pingRoleId}>` : "Not set"}\n` +
           `**Announce channel**: ${config.announceChannelId ? `<#${config.announceChannelId}>` : "Not set"}\n\n` +
           `**Current term**: ${termInfo}`
       );

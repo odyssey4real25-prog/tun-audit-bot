@@ -97,6 +97,7 @@ function defaultSettings() {
       intervalDays: 30,
       nonPermanentRoleId: null,
       permanentRoleId: null, // members with this role are always excluded
+      pingRoleId: null,
       announceChannelId: null,
       currentTermNationIds: [], // who's currently seated
       termStartedAt: null,
@@ -205,6 +206,7 @@ function getSettings(guildId) {
       intervalDays: 30,
       nonPermanentRoleId: null,
       permanentRoleId: null,
+      pingRoleId: null,
       announceChannelId: null,
       currentTermNationIds: [],
       termStartedAt: null,

@@ -16,6 +16,9 @@ module.exports = {
     .addRoleOption((opt) =>
       opt.setName("permanent_role").setDescription("Members with this role are always excluded from selection")
     )
+    .addRoleOption((opt) =>
+      opt.setName("ping_role").setDescription("Role to tag in the announcement, e.g. @Member States")
+    )
     .addChannelOption((opt) =>
       opt.setName("announce_channel").setDescription("Where to post the rotation announcement").addChannelTypes(ChannelType.GuildText)
     ),
@@ -30,6 +33,7 @@ module.exports = {
     const intervalDays = interaction.options.getInteger("interval_days");
     const nonPermanentRole = interaction.options.getRole("non_permanent_role");
     const permanentRole = interaction.options.getRole("permanent_role");
+    const pingRole = interaction.options.getRole("ping_role");
     const announceChannel = interaction.options.getChannel("announce_channel");
 
     if (enabled !== null) config.enabled = enabled;
@@ -38,6 +42,7 @@ module.exports = {
     if (intervalDays !== null) config.intervalDays = intervalDays;
     if (nonPermanentRole) config.nonPermanentRoleId = nonPermanentRole.id;
     if (permanentRole) config.permanentRoleId = permanentRole.id;
+    if (pingRole) config.pingRoleId = pingRole.id;
     if (announceChannel) config.announceChannelId = announceChannel.id;
 
     saveSettings(interaction.guildId, settings);
@@ -52,6 +57,7 @@ module.exports = {
           `**Term length**: ${config.intervalDays} days\n` +
           `**Non-permanent role**: ${config.nonPermanentRoleId ? `<@&${config.nonPermanentRoleId}>` : "Not set"}\n` +
           `**Permanent role (excluded)**: ${config.permanentRoleId ? `<@&${config.permanentRoleId}>` : "Not set"}\n` +
+          `**Announcement ping role**: ${config.pingRoleId ? `<@&${config.pingRoleId}>` : "Not set"}\n` +
           `**Announce channel**: ${config.announceChannelId ? `<#${config.announceChannelId}>` : "Not set"}`
       );
 

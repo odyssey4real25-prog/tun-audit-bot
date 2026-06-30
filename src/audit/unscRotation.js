@@ -137,6 +137,8 @@ async function runUnscRotation(client, guild, settings) {
         ({ nation, member }) => `**${nation.nation_name}** — <@${member.id}> (${nation.alliance_seniority} days seniority)`
       );
 
+      const pingContent = config.pingRoleId ? `<@&${config.pingRoleId}>` : null;
+
       const embed = new EmbedBuilder()
         .setTitle("🪐 New Non-Permanent UNSC Members")
         .setColor(0x3498db)
@@ -147,7 +149,7 @@ async function runUnscRotation(client, guild, settings) {
         .setFooter({ text: `${summary.eligibleCount} eligible, ${summary.excludedCount} excluded this round.` });
 
       try {
-        await channel.send({ embeds: [embed] });
+        await channel.send({ content: pingContent, embeds: [embed] });
       } catch (error) {
         // Non-fatal — the rotation itself still succeeded even if the announcement failed to post.
       }
