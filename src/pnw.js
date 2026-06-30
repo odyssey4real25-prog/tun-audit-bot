@@ -326,8 +326,22 @@ const NATION_BY_NAME_QUERY = `
   }
 `;
 
+// Small connector words that are usually kept lowercase in real names
+// (e.g. "The Commonwealth of Orbis", not "The Commonwealth Of Orbis").
+const TITLE_CASE_MINOR_WORDS = new Set([
+  "a", "an", "the", "of", "and", "or", "but", "nor", "in", "on", "at", "to", "for", "by", "with"
+]);
+
 function titleCase(text) {
-  return text.replace(/\w\S*/g, (word) => word[0].toUpperCase() + word.slice(1).toLowerCase());
+  const words = text.toLowerCase().split(" ");
+  return words
+    .map((word, idx) => {
+      if (word.length === 0) return word;
+      // Always capitalize the first word, even if it's a minor word.
+      if (idx > 0 && TITLE_CASE_MINOR_WORDS.has(word)) return word;
+      return word[0].toUpperCase() + word.slice(1);
+    })
+    .join(" ");
 }
 
 async function findNationIdByName(name) {
