@@ -38,6 +38,14 @@ function activeWarCount(wars) {
   return wars.filter((w) => w.turnsleft > 0).length;
 }
 
+// A nation can personally hide their resources (a privacy toggle on their
+// own account, not tied to alliance membership). PnW's API represents this
+// inconsistently — sometimes as -1, sometimes as null — so we treat both
+// the same way: "we can't check this," not a real value.
+function isHidden(value) {
+  return value === -1 || value === null || value === undefined;
+}
+
 const checks = [
   {
     key: "check12_colour_bloc",
@@ -89,10 +97,10 @@ const checks = [
       const policy = { ...settings.warchestPolicy, ...(settings.memberWarchestOverrides[String(nation.id)] || {}) };
 
       // A nation can personally hide their resources (a privacy toggle on
-      // their own account, not tied to alliance membership) — when they
-      // have, the API returns -1 for every resource. Treat that as
-      // "can't check this," not as a real (and accidentally always-passing) value.
-      const hiddenResources = RESOURCE_FIELDS.filter((r) => nation[r] === -1);
+      // their own account, not tied to alliance membership) — when hidden,
+      // treat it as "can't check this," not as a real (and accidentally
+      // always-passing, or crash-causing) value.
+      const hiddenResources = RESOURCE_FIELDS.filter((r) => isHidden(nation[r]));
       if (hiddenResources.length === RESOURCE_FIELDS.length) {
         return { passed: true, detail: "This nation has hidden their resources — can't check this." };
       }
@@ -101,7 +109,7 @@ const checks = [
       // this nation is per-city amount × city count.
       const violations = [];
       for (const resource of RESOURCE_FIELDS) {
-        if (nation[resource] === -1) continue; // hidden, can't check
+        if (isHidden(nation[resource])) continue; // hidden, can't check
         const perCity = policy[resource];
         if (perCity === undefined || perCity === null) continue; // not tracked
         const required = perCity * nation.num_cities;
@@ -145,9 +153,9 @@ const checks = [
         nation.aircraft * DAILY_UPKEEP.aircraft +
         nation.ships * DAILY_UPKEEP.ships;
 
-      // -1 means this nation has hidden their money (a personal privacy
-      // toggle) — we can't check upkeep for them, so don't penalize it.
-      const moneyHidden = nation.money === -1;
+      // A nation can have hidden money (a personal privacy toggle) — we
+      // can't check upkeep for them, so don't penalize it.
+      const moneyHidden = isHidden(nation.money);
       const hasUpkeep = moneyHidden || nation.money >= dailyCost;
 
       const problems = [];
