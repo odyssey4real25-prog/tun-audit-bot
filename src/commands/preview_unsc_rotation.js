@@ -3,6 +3,11 @@ const { getAllianceNations } = require("../pnw");
 const { findEligibleNations } = require("../audit/unscRotation");
 const { getSettings } = require("../db");
 
+// Splits lines into chunks that fit within Discord's embed field limit.
+// Importantly: always pushes the remaining `current` buffer BEFORE
+// checking if anything was collected — the original bug returned "None"
+// when all lines fit into one chunk (because the `chunks` array stayed
+// empty even though `current` held all the content).
 function chunkLines(lines, maxLength = 1000) {
   const chunks = [];
   let current = "";
@@ -14,6 +19,7 @@ function chunkLines(lines, maxLength = 1000) {
       current = current ? `${current}\n${line}` : line;
     }
   }
+  if (current) chunks.push(current); // always flush the last buffer
   return chunks.length > 0 ? chunks : ["None"];
 }
 
@@ -47,24 +53,50 @@ module.exports = {
 
     const { eligible, excluded } = await findEligibleNations(interaction.guild, settings, members);
 
-    const eligibleLines = eligible.map(({ nation, seniorityDays }) => `✅ **${nation.nation_name}** — ${seniorityDays} days`);
-    const excludedLines = excluded.map(({ nation, reason }) => `⏭️ **${nation.nation_name}** — ${reason}`);
+    const eligibleLines = eligible.map(
+      ({ nation, seniorityDays }) => `✅ **${nation.nation_name}** — ${seniorityDays} days`
+    );
+    const excludedLines = excluded.map(
+      ({ nation, reason }) => `⏭️ **${nation.nation_name}** — ${reason}`
+    );
 
-    const embed = new EmbedBuilder()
+    // Each list might need multiple embeds if it exceeds Discord's total
+    // 6000-char embed limit — send Eligible and Excluded as separate
+    // follow-ups so they each get their own fresh budget.
+    const summary = new EmbedBuilder()
       .setTitle("UNSC Rotation Preview (no roles changed)")
       .setColor(0x3498db)
       .setDescription(
-        `**${eligible.length}** eligible, **${excluded.length}** excluded. ${config.seatCount} seat(s) per term — ` +
-          `${eligible.length >= config.seatCount ? "enough eligible members to fill every seat." : "⚠️ NOT enough eligible members to fill every seat."}`
+        `**${eligible.length}** eligible, **${excluded.length}** excluded. ` +
+          `${config.seatCount} seat(s) per term — ` +
+          `${eligible.length >= config.seatCount
+            ? "enough eligible members to fill every seat."
+            : "⚠️ NOT enough eligible members to fill every seat."}`
       );
 
-    chunkLines(eligibleLines).forEach((chunk, idx) => {
-      embed.addFields({ name: idx === 0 ? "Eligible" : "\u200b", value: chunk });
-    });
-    chunkLines(excludedLines).forEach((chunk, idx) => {
-      embed.addFields({ name: idx === 0 ? "Excluded" : "\u200b", value: chunk });
+    const eligibleEmbed = new EmbedBuilder()
+      .setTitle("✅ Eligible Members")
+      .setColor(0x2ecc71)
+      .setDescription(eligibleLines.join("\n") || "None");
+
+    const embedsToSend = [summary, eligibleEmbed];
+
+    // Excluded list might be long — chunk it into separate embeds if needed
+    const excludedChunks = chunkLines(excludedLines);
+    excludedChunks.forEach((chunk, idx) => {
+      embedsToSend.push(
+        new EmbedBuilder()
+          .setTitle(idx === 0 ? "⏭️ Excluded Members" : "⏭️ Excluded Members (cont.)")
+          .setColor(0xe74c3c)
+          .setDescription(chunk)
+      );
     });
 
-    await interaction.followUp({ embeds: [embed] });
+    // Discord allows max 10 embeds per message — send in batches if needed
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < embedsToSend.length; i += BATCH_SIZE) {
+      const batch = embedsToSend.slice(i, i + BATCH_SIZE);
+      await interaction.followUp({ embeds: batch });
+    }
   }
 };
